@@ -33,7 +33,9 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [
+              "./node_modules/peerjs/dist/peerjs.min.js"
+            ]
           },
           "configurations": {
             "production": {
@@ -53,8 +55,8 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kb",
-                  "maximumError": "1mb"
+                  "maximumWarning": "1mb",
+                  "maximumError": "1.2mb"
                 },
                 {
                   "type": "anyComponentStyle",
@@ -96,7 +98,9 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": []
+            "scripts": [
+              "./node_modules/peerjs/dist/peerjs.min.js"
+            ]
           }
         },
         "lint": {
@@ -127,5 +131,8 @@
       }
     }
   },
-  "defaultProject": "web-rtc"
+  "defaultProject": "web-rtc",
+  "cli": {
+    "analytics": "f9b6ae1b-e378-48e1-a98d-1f286321ad7a"
+  }
 }

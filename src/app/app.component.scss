@@ -1,0 +1,45 @@
+.click-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    width: 100vw;
+    height: 100vh;
+
+    background: rgba(black, .7);
+    color: white;
+
+    font-size: 32px;
+
+    cursor: pointer;
+}
+
+a {
+    color: teal;
+}
+
+a:hover, a:focus, a:active {
+    text-decoration: underline;
+}
+
+video {
+    background: grey;
+    width: 100%;
+    height: auto;
+    min-height: 1px;
+}
+
+.video-container {
+    video {
+        max-width: 500px;
+        min-width: 1px;
+    }
+}
+
+// .hide-video {
+//     display: none;
+// }

@@ -1,1 +1,29 @@
 /* You can add global styles to this file, and also import other style files */
+
+:root {
+    --app-height-100: 100vh;
+    --app-height-50: 50vh;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+
+    
+}
+
+body {
+    // Removed height: 100% since this causes scroll event on window not to fire for safari
+    // source: https://github.com/WickyNilliams/headroom.js/issues/127
+    // height: 100%;
+    
+    min-height: 100vh;
+    min-height: var(--app-height-100);
+
+    overflow-x: hidden;
+    overflow-y: visible;
+
+    width: 100%;
+
+    font-family: Roboto, "Helvetica Neue", sans-serif;
+}
