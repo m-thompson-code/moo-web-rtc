@@ -1,0 +1,36 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "basic peerjs server using express and GAE",
+  "main": "index.js",
+  "homepage": "https://github.com/m-thompson-code/moo-web-rtc#readme",
+  "bugs": {
+    "url": "https://github.com/m-thompson-code/moo-web-rtc/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/m-thompson-code/moo-web-rtc.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rimraf dist && tsc",
+    "start": "npm run build && node dist/index",
+    "serve": "npm run start",
+    "deploy": "npm run build && gcloud app deploy --project=moo-web-rtc-server --promote --quiet app.yaml",
+    "deploy:log": "npm run build && gcloud app deploy --project=moo-web-rtc-server --promote app.yaml"
+  },
+  "author": "m.thompson.code@gmail.com",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "peer": "^0.6.1",
+    "rimraf": "^3.0.2",
+    "typescript": "^4.1.2"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": "^12.0.0",
+    "npm": "^6.0.0"
+  }
+}
