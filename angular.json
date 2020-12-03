@@ -166,6 +166,10 @@
               "devServerTarget": "web-rtc:serve:staging"
             }
           }
+        },
+        "deploy": {
+          "builder": "@angular/fire:deploy",
+          "options": {}
         }
       }
     }

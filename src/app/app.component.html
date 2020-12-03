@@ -1,62 +1,83 @@
-<div>
-    PeerJS Demo
-</div>
+<ng-container *ngIf="!initalized">
+    initalizing...
+</ng-container>
 
-<br>
-
-<div>
-    <a (click)="setPeer('moocow-a')">PEER A (moocow-a)</a> | <a (click)="setPeer('moocow-b')">PEER B (moocow-b)</a>
-</div>
-
-<div>
-    Peer: {{ peer?.id || 'none' }}
-</div>
-
-<br>
-
-<div *ngIf="otherID && !conn">
-    <a (click)="connect()">Connect</a>
-</div>
-<div *ngIf="otherID && conn">
-    <a (click)="disconnect()">Disconnect</a>
-</div>
-
-<br>
-
-<div *ngIf="conn">
-    <form [formGroup]="formGroup" (ngSubmit)="submit()">
-        <input formControlName="send"><button type="submit">Send</button>
-    </form>
-
-    <br>
+<ng-container *ngIf="initalized">
+    <div *ngIf="authService.user">
+        Auth: {{ authService.user.uid }} {{ authService.user?.isAnonymous ? 'Anonymous' : (authService.user?.email || 'no email') }} <a (click)="authService.signOut()">Sign Out</a>
+    </div>
+    
+    <div *ngIf="!authService.user">
+        Auth: none
+    </div>
 
     <div>
-        <button (click)="call()">Call</button>
+        <a (click)="addUser()">Add User</a>
     </div>
-</div>
 
-<div *ngFor="let data of datas">
-    {{ data.peerID }} {{ data.timestamp | date:'short' }}: {{ data.value }}
-</div>
-
-<br>
-
-<div>
-    You:
-</div>
-<div class="video-container">
-    <video #myVideo playsinline [ngClass]="{'hide-video': !handledRequiredInteraction}">
-    </video>
-</div>
-
-<div>
-    Them:
-</div>
-<div class="video-container">
-    <video #theirVideo playsinline [ngClass]="{'hide-video': !handledRequiredInteraction}">
-    </video>
-</div>
-
-<div *ngIf="!handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
-    Click here to start
-</div>
+    <div>
+        Players:
+        <div *ngFor="let publicPlayer of publicPlayersData.value">
+            <div>UID: {{ publicPlayer.uid }} - Username: {{ publicPlayer.username }} - {{ publicPlayer.createdAtDate | date:'short' }}</div>
+        </div>
+    </div>
+    
+    <br>
+    
+    <div>
+        <a (click)="getPeer('moocow-a')">PEER A (moocow-a)</a> | <a (click)="getPeer('moocow-b')">PEER B (moocow-b)</a>
+    </div>
+    
+    <div>
+        Peer: {{ peerjsService.peer?.id || 'none' }}
+    </div>
+    
+    <br>
+    
+    <div *ngIf="otherID && !peerjsService.conn">
+        <a (click)="peerjsService.connect()">Connect</a>
+    </div>
+    <div *ngIf="otherID && peerjsService.conn">
+        <a (click)="peerjsService.disconnect()">Disconnect</a>
+    </div>
+    
+    <br>
+    
+    <div *ngIf="peerjsService.conn">
+        <form [formGroup]="formGroup" (ngSubmit)="submit()">
+            <input formControlName="send"><button type="submit">Send</button>
+        </form>
+    
+        <br>
+    
+        <div>
+            <button (click)="call()">Call</button>
+        </div>
+    </div>
+    
+    <div *ngFor="let data of datas">
+        {{ data.peerID }} {{ data.timestamp | date:'short' }}: {{ data.value }}
+    </div>
+    
+    <br>
+    
+    <div>
+        You:
+    </div>
+    <div class="video-container">
+        <video #myVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+        </video>
+    </div>
+    
+    <div>
+        Them:
+    </div>
+    <div class="video-container">
+        <video #theirVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+        </video>
+    </div>
+    
+    <div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
+        Click here to start
+    </div>    
+</ng-container>

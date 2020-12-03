@@ -3,7 +3,7 @@ export interface Environment {
     firebaseConfig: {
         apiKey: string;
         authDomain: string;
-        databaseURL: string;
+        databaseURL?: string;
         projectId: string;
         storageBucket: string;
         messagingSenderId: string;

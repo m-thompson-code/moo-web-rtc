@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "moo-web-rtc"
+    "dev": "moo-web-rtc-staging",
+    "prod": "moo-web-rtc"
   }
 }
