@@ -33,9 +33,12 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": [
-              "./node_modules/peerjs/dist/peerjs.min.js"
-            ]
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "src"
+              ]
+            },
+            "scripts": []
           },
           "configurations": {
             "production": {
@@ -128,9 +131,12 @@
             "styles": [
               "src/styles.scss"
             ],
-            "scripts": [
-              "./node_modules/peerjs/dist/peerjs.min.js"
-            ]
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "src"
+              ]
+            },
+            "scripts": []
           }
         },
         "lint": {
