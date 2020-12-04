@@ -1,8 +1,8 @@
-<div *ngIf="authService.user">
-    Auth: {{ authService.user.uid }} {{ authService.user?.isAnonymous ? 'Anonymous' : (authService.user?.email || 'no email') }} <a (click)="authService.signOut()">Sign Out</a>
+<div *ngIf="user">
+    Auth: {{ user.uid }} {{ user?.isAnonymous ? 'Anonymous' : (user?.email || 'no email') }} <a (click)="signOut()">Sign Out</a>
 </div>
 
-<div *ngIf="!authService.user">
+<div *ngIf="!user">
     Auth: none
 </div>
 

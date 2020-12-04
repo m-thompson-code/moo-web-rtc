@@ -1,4 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+
+import firebase from 'firebase/app';
+import { Subscription } from 'rxjs';
 
 import { AuthService } from './services/auth.service';
 
@@ -7,10 +10,14 @@ import { AuthService } from './services/auth.service';
     templateUrl: './app.component.html',
     styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
+    public user: firebase.User | null = null;
+
     public initalized: boolean = false;
 
-    constructor(public authService: AuthService) {
+    private _sub?: Subscription;
+
+    constructor(private authService: AuthService) {
 
     }
 
@@ -20,6 +27,10 @@ export class AppComponent implements OnInit {
 
     private _init(): Promise<void> {
         this.initalized = false;
+
+        this._sub = this.authService.onUserChange().subscribe(user => {
+            this.user = user;
+        });
 
         return this.authService.init().then(user => {
             console.log(user);
@@ -34,5 +45,13 @@ export class AppComponent implements OnInit {
         }).then(() => {
             this.initalized = true;
         });
+    }
+
+    public signOut(): Promise<void> {
+        return this.authService.signOut();
+    }
+
+    public ngOnDestroy(): void {
+        this._sub?.unsubscribe();
     }
 }

@@ -1,6 +1,58 @@
-<div>
-    <a (click)="addUser()">Add User</a>
+<div *ngIf="myPrivatePlayerData.value">
+    <div>
+        My private player data
+    </div>
+
+    <div>
+        UID: {{ myPrivatePlayerData.value.uid }}
+    </div>
+    <div>
+        Username: {{ myPrivatePlayerData.value.username }}
+    </div>
+    <div>
+        Active: {{ !!myPrivatePlayerData.value.active }}
+    </div>
+
+    <div>
+        Created At: {{ myPrivatePlayerData.value.createdAtDate | date:'short' }}
+    </div>
+    <div>
+        Updated At: {{ myPrivatePlayerData.value.updatedAtDate | date:'short' }}
+    </div>
+
+    <div>
+        peerID: {{ myPrivatePlayerData.value.peerID }}
+    </div>
+    <div>
+        phoneNumber: {{ myPrivatePlayerData.value.phoneNumber }}
+    </div>
+    <div>
+        emailAddress: {{ myPrivatePlayerData.value.emailAddress }}
+    </div>
+    <div>
+        shippingAddress: {{ myPrivatePlayerData.value.shippingAddress }}
+    </div>
 </div>
+
+<br>
+
+<form [formGroup]="setPlayerFormGroup" (ngSubmit)="setUser()">
+    <label controlName="username">Username</label>
+    <input formControlName="username"><br>
+
+    <label controlName="emailAddress">Email Address</label>
+    <input formControlName="emailAddress"><br>
+
+    <label controlName="shippingAddress">Shipping Address</label>
+    <input formControlName="shippingAddress"><br>
+    
+    <label controlName="phoneNumber">Phone Number</label>
+    <input formControlName="phoneNumber"><br>
+
+    <button type="submit">Set Player</button>
+</form>
+
+<br>
 
 <div>
     Public Players:

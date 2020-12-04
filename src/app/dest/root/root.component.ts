@@ -1,9 +1,15 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
-import { FirebaseService, PublicPlayerData } from '@app/services/firebase.service';
+import { Subscription } from 'rxjs';
+
+import firebase from 'firebase/app';
+
+import { AuthService } from '@app/services/auth.service';
+import { FirebaseService, PrivatePlayerData, PublicPlayerData } from '@app/services/firebase.service';
 import { PeerjsService } from '@app/services/peerjs.service';
 import { VideoService } from '@app/services/video.service';
-import { Subscription } from 'rxjs';
+
+import * as faker from 'faker';
 
 @Component({
     selector: 'app-root',
@@ -16,6 +22,7 @@ export class RootComponent implements OnInit, OnDestroy {
 
     
     public formGroup!: FormGroup;
+    public setPlayerFormGroup!: FormGroup;
 
     // public peer?: Peer;
     // public conn?:Peer.DataConnection;
@@ -38,14 +45,23 @@ export class RootComponent implements OnInit, OnDestroy {
     public theirStream?: MediaStream;
 
     private _sub?: Subscription;
+    private _sub2?: Subscription;
+    private _sub3?: Subscription;
 
     public publicPlayersData: {
         value: PublicPlayerData[];
         isPending: boolean;
     } = { value: [], isPending: true };
 
+    public myPrivatePlayerData: {
+        value?: PrivatePlayerData;
+        isPending: boolean;
+    } = { value: undefined, isPending: true };
+
     constructor(private fb: FormBuilder, private firebaseService: FirebaseService, 
-        public peerjsService: PeerjsService, public videoService: VideoService) { }
+    public peerjsService: PeerjsService, public videoService: VideoService, private authService: AuthService) {
+        
+    }
 
     public ngOnInit(): void {
         this._init();
@@ -53,6 +69,25 @@ export class RootComponent implements OnInit, OnDestroy {
         this.formGroup = this.fb.group({
             'send': new FormControl({
                 value: 'hello world',
+                disabled: false,
+            }),
+        });
+
+        this.setPlayerFormGroup = this.fb.group({
+            'username': new FormControl({
+                value: faker.name.findName(),
+                disabled: false,
+            }),
+            'emailAddress': new FormControl({
+                value: faker.internet.email(),
+                disabled: false,
+            }),
+            'shippingAddress': new FormControl({
+                value: faker.address.streetAddress(true),
+                disabled: false,
+            }),
+            'phoneNumber': new FormControl({
+                value: faker.phone.phoneNumber('###-###-####'),
                 disabled: false,
             }),
         });
@@ -75,12 +110,40 @@ export class RootComponent implements OnInit, OnDestroy {
             isPending: true,
         };
 
+        this._sub?.unsubscribe();
+
         this._sub = this.firebaseService.getPublicPlayers().subscribe(publicPlayers => {
             this.publicPlayersData = {
                 value: publicPlayers,
                 isPending: false,
             };
         });
+
+        this._sub2?.unsubscribe();
+
+        this._sub2 = this.authService.onUserChange().subscribe(user => {
+            this._updateMyPrivatePlayer(this.authService.user);
+        });
+
+        this._updateMyPrivatePlayer(this.authService.user);
+    }
+
+    private _updateMyPrivatePlayer(user?: firebase.User | null): void {
+        this._sub3?.unsubscribe();
+
+        this.myPrivatePlayerData = {
+            value: undefined,
+            isPending: false,
+        };
+
+        if (user) {
+            this._sub3 = this.firebaseService.getPrivatePlayer(user.uid).subscribe(privatePlayer => {
+                this.myPrivatePlayerData = {
+                    value: privatePlayer,
+                    isPending: false,
+                };
+            });
+        }
     }
     
     public getPeer(peerID: string): void {
@@ -105,7 +168,7 @@ export class RootComponent implements OnInit, OnDestroy {
     }
 
     public submit(): void {
-        const sendFormControl = this.formGroup.get('send');
+        const sendFormControl = this.setPlayerFormGroup.get('username');
 
         if (!sendFormControl) {
             return;
@@ -124,21 +187,45 @@ export class RootComponent implements OnInit, OnDestroy {
         });
     }
 
-    public addUser(): Promise<void> {
-        const playerData = {
-            username: 'myusername',
-            peerID: 'mypeerID',
-            phoneNumber: 'myPhoneNumber',
-            emailAddress: 'myEmail',
-            shippingAddress: 'myShippingAddress',
-        };
+    public setUser(): Promise<void> {
+        const usernameFormControl = this.setPlayerFormGroup.get('username');
+
+        if (!usernameFormControl) {
+            throw new Error("Unexpected missing username form control");
+        }
+
+        const username = usernameFormControl.value;
+
+        const emailAddressFormControl = this.setPlayerFormGroup.get('emailAddress');
+
+        if (!emailAddressFormControl) {
+            throw new Error("Unexpected missing emailAddress form control");
+        }
+
+        const emailAddress = emailAddressFormControl.value;
+
+        const shippingAddressFormControl = this.setPlayerFormGroup.get('shippingAddress');
+
+        if (!shippingAddressFormControl) {
+            throw new Error("Unexpected missing shippingAddress form control");
+        }
+
+        const shippingAddress = shippingAddressFormControl.value;
+
+        const phoneNumberFormControl = this.setPlayerFormGroup.get('phoneNumber');
+
+        if (!phoneNumberFormControl) {
+            throw new Error("Unexpected missing phoneNumber form control");
+        }
+
+        const phoneNumber = phoneNumberFormControl.value;
 
         return this.firebaseService.addUser({
-            username: playerData.username,
-            peerID: playerData.peerID,
-            phoneNumber: playerData.phoneNumber,
-            emailAddress: playerData.emailAddress,
-            shippingAddress: playerData.shippingAddress,
+            username: username,
+            peerID: this.peerjsService.getRandomPeerID(),
+            phoneNumber: phoneNumber,
+            emailAddress: emailAddress,
+            shippingAddress: shippingAddress,
         });
     }
 
@@ -149,5 +236,7 @@ export class RootComponent implements OnInit, OnDestroy {
 
     public ngOnDestroy(): void {
         this._sub?.unsubscribe();
+        this._sub2?.unsubscribe();
+        this._sub3?.unsubscribe();
     }
 }

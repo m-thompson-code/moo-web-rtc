@@ -178,7 +178,7 @@ export class FirebaseService {
     }
 
     public getPublicPlayer(uid: string): Observable<PublicPlayerData | undefined> {
-        return this.firestore.collection<RawPublicPlayerData>(PRIVATE_PLAYERS_COL).doc(uid).valueChanges({idField: 'uid'}).pipe(map(doc => {
+        return this.firestore.collection<RawPublicPlayerData>(PUBLIC_PLAYERS_COL).doc(uid).valueChanges({idField: 'uid'}).pipe(map(doc => {
             const player: PublicPlayerData | undefined = this._rawDataToPublicPlayerData(doc);
 
             return player;

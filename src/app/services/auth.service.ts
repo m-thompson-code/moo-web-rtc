@@ -5,30 +5,48 @@ import firebase from 'firebase/app';
 import 'firebase/auth';
 
 import { environment } from '@environment';
+import { Observable, Subject } from 'rxjs';
 
 @Injectable({
     providedIn: 'root',
 })
 export class AuthService {
-    public firebaseAuthUnSub?: firebase.Unsubscribe;
+    private _firebaseAuthUnSub?: firebase.Unsubscribe;
     public user?: firebase.User | null;
     public currentUserIsAdmin: boolean = false;
 
+    private _userSubject: Subject<firebase.User | null>;
+    private _userObservable: Observable<firebase.User | null>;
+
+    public initalized: boolean = false;
+
     constructor(private ngZone: NgZone) {
-        
+        this._userSubject = new Subject<firebase.User | null>();
+        this._userObservable = this._userSubject.asObservable();
     }
     
     public init(): Promise<firebase.User | null> {
         this.dispatch();
 
+        this.initalized = true;
+
         return new Promise(resolve => {
-            this.firebaseAuthUnSub = firebase.auth().onAuthStateChanged(user => {
+            this._firebaseAuthUnSub = firebase.auth().onAuthStateChanged(user => {
                 this.ngZone.run(() => {
                     this.user = user;
+                    this._userSubject.next(user);
                     resolve(user);
                 });
             });
         });
+    }
+
+    public onUserChange(): Observable<firebase.User | null> {
+        // if (!this.initalized) {
+        //     throw new Error("AuthService needs to be initalized first (call AuthService.init)");
+        // }
+
+        return this._userObservable;
     }
 
     public signInWithEmailAndPassword(email: string, password: string): Promise<void> {
@@ -52,12 +70,12 @@ export class AuthService {
     }
 
     public signOut(): Promise<void> {
-        return firebase.auth().signOut().then(() => {
-            // pass
-        });
+        return firebase.auth().signOut();
     }
 
     public dispatch(): void {
-        this.firebaseAuthUnSub && this.firebaseAuthUnSub();
+        this._firebaseAuthUnSub && this._firebaseAuthUnSub();
+
+        this.initalized = false;
     }
 }
