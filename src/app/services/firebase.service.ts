@@ -161,6 +161,30 @@ export class FirebaseService {
         return batch.commit();
     }
 
+    private _rawDataToPublicPlayerData(data: any): PublicPlayerData | undefined {
+        if (!data) {
+            return undefined;
+        }
+
+        const privatePlayerData: PublicPlayerData = {
+            uid: data.uid || '',
+            username: data.username || '',
+            active: !!data.active,
+            createdAtDate: data.createdAtTimestamp?.toDate() || undefined,
+            updatedAtDate: data.updatedAtTimestamp?.toDate() || undefined,
+        };
+
+        return privatePlayerData;
+    }
+
+    public getPublicPlayer(uid: string): Observable<PublicPlayerData | undefined> {
+        return this.firestore.collection<RawPublicPlayerData>(PRIVATE_PLAYERS_COL).doc(uid).valueChanges({idField: 'uid'}).pipe(map(doc => {
+            const player: PublicPlayerData | undefined = this._rawDataToPublicPlayerData(doc);
+
+            return player;
+        }));
+    }
+
     public getPublicPlayers(): Observable<PublicPlayerData[]> {
         return this.firestore.collection<RawPublicPlayerData>(PUBLIC_PLAYERS_COL, ref => ref.where('active', '==', true).orderBy('createdAtTimestamp')).valueChanges({idField: 'uid'}).pipe(map(collection => {
             const players: PublicPlayerData[] = [];
@@ -180,6 +204,35 @@ export class FirebaseService {
             return players;
         }));
     }
+
+    private _rawDataToPrivatePlayerData(data: any): PrivatePlayerData | undefined {
+        if (!data) {
+            return undefined;
+        }
+
+        const privatePlayerData: PrivatePlayerData = {
+            uid: data.uid || '',
+            username: data.username || '',
+            active: !!data.active,
+            createdAtDate: data.createdAtTimestamp?.toDate() || undefined,
+            updatedAtDate: data.updatedAtTimestamp?.toDate() || undefined,
+
+            peerID: data.peerID,
+            phoneNumber: data.phoneNumber,
+            emailAddress: data.emailAddress,
+            shippingAddress: data.shippingAddress,
+        };
+
+        return privatePlayerData;
+    }
+
+    public getPrivatePlayer(uid: string): Observable<PrivatePlayerData | undefined> {
+        return this.firestore.collection<RawPrivatePlayerData>(PRIVATE_PLAYERS_COL).doc(uid).valueChanges({idField: 'uid'}).pipe(map(doc => {
+            const player: PrivatePlayerData | undefined = this._rawDataToPrivatePlayerData(doc);
+
+            return player;
+        }));
+    }
     
     public getPrivatePlayers(): Observable<PrivatePlayerData[]> {
         return this.firestore.collection<RawPrivatePlayerData>(PRIVATE_PLAYERS_COL, ref => ref.where('active', '==', true).orderBy('createdAtTimestamp')).valueChanges({idField: 'uid'}).pipe(map(collection => {
@@ -188,18 +241,11 @@ export class FirebaseService {
             for (const doc of collection) {
                 console.log(doc);
 
-                players.push({
-                    uid: doc.uid || '',
-                    username: doc.username || '',
-                    active: !!doc.active,
-                    createdAtDate: doc.createdAtTimestamp?.toDate() || undefined,
-                    updatedAtDate: doc.updatedAtTimestamp?.toDate() || undefined,
+                const player = this._rawDataToPrivatePlayerData(doc);
 
-                    peerID: doc.peerID,
-                    phoneNumber: doc.phoneNumber,
-                    emailAddress: doc.emailAddress,
-                    shippingAddress: doc.shippingAddress,
-                });
+                if (player) {
+                    players.push(player);
+                }
             }
 
             return players;
