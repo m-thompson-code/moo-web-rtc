@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import { FirebaseService, PublicPlayerData } from '@app/services/firebase.service';
 import { PeerjsService } from '@app/services/peerjs.service';
@@ -10,7 +10,7 @@ import { Subscription } from 'rxjs';
     templateUrl: './root.component.html',
     styleUrls: ['./root.component.scss']
 })
-export class RootComponent implements OnInit {
+export class RootComponent implements OnInit, OnDestroy {
     @ViewChild('myVideo', {static: true}) private myVideo!: ElementRef<HTMLVideoElement>;
     @ViewChild('theirVideo', {static: true}) private theirVideo!: ElementRef<HTMLVideoElement>;
 
@@ -82,7 +82,6 @@ export class RootComponent implements OnInit {
             };
         });
     }
-
     
     public getPeer(peerID: string): void {
         const onOpen = () => {

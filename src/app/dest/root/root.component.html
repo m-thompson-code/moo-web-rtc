@@ -3,7 +3,7 @@
 </div>
 
 <div>
-    Players:
+    Public Players:
     <div *ngFor="let publicPlayer of publicPlayersData.value">
         <div>UID: {{ publicPlayer.uid }} - Username: {{ publicPlayer.username }} - {{ publicPlayer.createdAtDate | date:'short' }}</div>
     </div>

@@ -1,1 +1,8 @@
-<p>admin works!</p>
+<p>Admin</p>
+
+<div>
+    Private Players:
+    <div *ngFor="let privatePlayer of privatePlayersData.value">
+        <div>UID: {{ privatePlayer.uid }} - Username: {{ privatePlayer.username }} - {{ privatePlayer.createdAtDate | date:'short' }} - peerID: {{ privatePlayer.peerID }}</div>
+    </div>
+</div>

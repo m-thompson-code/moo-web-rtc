@@ -1,15 +1,44 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FirebaseService, PrivatePlayerData } from '@app/services/firebase.service';
+import { Subscription } from 'rxjs';
 
 @Component({
-  selector: 'app-admin',
-  templateUrl: './admin.component.html',
-  styleUrls: ['./admin.component.scss']
+    selector: 'app-admin',
+    templateUrl: './admin.component.html',
+    styleUrls: ['./admin.component.scss']
 })
-export class AdminComponent implements OnInit {
+export class AdminComponent implements OnInit, OnDestroy {
+    private _sub?: Subscription;
 
-  constructor() { }
+    public privatePlayersData: {
+        value: PrivatePlayerData[];
+        isPending: boolean;
+    } = { value: [], isPending: true };
 
-  ngOnInit(): void {
-  }
+    constructor(private firebaseService: FirebaseService) {
 
+    }
+
+    public ngOnInit(): void {
+        this._init();
+    }
+
+    
+    public _init(): void {
+        this.privatePlayersData = {
+            value: [],
+            isPending: true,
+        };
+
+        this._sub = this.firebaseService.getPrivatePlayers().subscribe(privatePlayers => {
+            this.privatePlayersData = {
+                value: privatePlayers,
+                isPending: false,
+            };
+        });
+    }
+
+    public ngOnDestroy(): void {
+        this._sub?.unsubscribe();
+    }
 }

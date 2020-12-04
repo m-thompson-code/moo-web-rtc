@@ -21,26 +21,66 @@ import { AuthService } from './auth.service';
 
 // import { environment } from '@environment';
 
+export interface WritePublicPlayerData {
+    username: string;
+    active: boolean;
+
+    createdAtTimestamp: firebase.firestore.FieldValue;
+    updatedAtTimestamp: firebase.firestore.FieldValue;
+}
+
 export interface RawPublicPlayerData {
     username: string;
+    active: boolean;
+
     createdAtTimestamp?: firebase.firestore.Timestamp;
     updatedAtTimestamp?: firebase.firestore.Timestamp;
+}
+
+export interface WritePrivatePlayerData {
+    username: string;
+    active: boolean;
+
+    createdAtTimestamp: firebase.firestore.FieldValue;
+    updatedAtTimestamp: firebase.firestore.FieldValue;
+
+    peerID: string;
+    phoneNumber: string;
+    emailAddress: string;
+    shippingAddress: string;
+}
+
+export interface RawPrivatePlayerData extends RawPublicPlayerData {
+    username: string;
+    active: boolean;
+
+    createdAtTimestamp?: firebase.firestore.Timestamp;
+    updatedAtTimestamp?: firebase.firestore.Timestamp;
+
+    peerID: string;
+    phoneNumber: string;
+    emailAddress: string;
+    shippingAddress: string;
 }
 
 export interface PublicPlayerData {
     uid: string;
 
     username: string;
-    createdAtDate?: Date;
-    updatedAtDate?: Date;
+    active: boolean;
+
+    createdAtDate?: Date;// timestamps are handled by Firebase directly, and when these values are updated, they can become null
+    updatedAtDate?: Date;// timestamps are handled by Firebase directly, and when these values are updated, they can become null
 }
 
-export interface PlayerData extends PublicPlayerData {
+export interface PrivatePlayerData extends PublicPlayerData {
     uid: string;
 
     username: string;
-    createdAtDate?: Date;
-    updatedAtDate?: Date;
+    active: boolean;
+
+    createdAtDate?: Date;// timestamps are handled by Firebase directly, and when these values are updated, they can become null
+    updatedAtDate?: Date;// timestamps are handled by Firebase directly, and when these values are updated, they can become null
 
     peerID: string;
     phoneNumber: string;
@@ -50,6 +90,20 @@ export interface PlayerData extends PublicPlayerData {
 
 export interface AddPlayerData {
     username: string;
+
+    peerID: string;
+    phoneNumber: string;
+    emailAddress: string;
+    shippingAddress: string;
+}
+
+export interface SetPlayerData {
+    username: string;
+    active: boolean;
+
+    createdAtTimestamp?: firebase.firestore.Timestamp;// timestamps are handled by Firebase directly, and when these values are updated, they can become null
+    updatedAtTimestamp?: firebase.firestore.Timestamp;// timestamps are handled by Firebase directly, and when these values are updated, they can become null
+
     peerID: string;
     phoneNumber: string;
     emailAddress: string;
@@ -58,7 +112,6 @@ export interface AddPlayerData {
 
 const PUBLIC_PLAYERS_COL = 'public_players';
 const PRIVATE_PLAYERS_COL = 'private_players';
-const PERSISTENT_PLAYERS_COL = 'persistent_players';
 
 @Injectable({
     providedIn: 'root'
@@ -79,54 +132,73 @@ export class FirebaseService {
 
         const publicPlayerRef = firebase.firestore().collection(PUBLIC_PLAYERS_COL).doc(uid);
         const privatePlayerRef = firebase.firestore().collection(PRIVATE_PLAYERS_COL).doc(uid);
-        const persistentPlayerRef = firebase.firestore().collection(PERSISTENT_PLAYERS_COL).doc(uid);
 
         const timestampFieldValue: firebase.firestore.FieldValue = firebase.firestore.FieldValue.serverTimestamp();
 
-        batch.set(publicPlayerRef, {
+        const publicData: WritePublicPlayerData = {
             username: playerData.username,
-            state: 'pending',
+            active: true,
             createdAtTimestamp: timestampFieldValue,
             updatedAtTimestamp: timestampFieldValue,
-        });
+        };
 
-        batch.set(privatePlayerRef, {
-            username: playerData.username,
+        batch.set(publicPlayerRef, publicData);
+
+        const privateData: WritePrivatePlayerData = {
+            username: publicData.username,
+            active: publicData.active,
+            createdAtTimestamp: publicData.createdAtTimestamp,
+            updatedAtTimestamp: publicData.updatedAtTimestamp,
+
             peerID: playerData.peerID,
             phoneNumber: playerData.phoneNumber,
             emailAddress: playerData.emailAddress,
-            shippingAddress: playerData.shippingAddress,
-            state: 'pending',
-            createdAtTimestamp: timestampFieldValue,
-            updatedAtTimestamp: timestampFieldValue,
-        });
+            shippingAddress: playerData.shippingAddress,   
+        };
 
-        batch.set(persistentPlayerRef, {
-            username: playerData.username,
-            peerID: playerData.peerID,
-            phoneNumber: playerData.phoneNumber,
-            emailAddress: playerData.emailAddress,
-            shippingAddress: playerData.shippingAddress,
-            state: 'pending',
-            createdAtTimestamp: timestampFieldValue,
-            updatedAtTimestamp: timestampFieldValue,
-        });
+        batch.set(privatePlayerRef, privateData);
 
         return batch.commit();
     }
 
     public getPublicPlayers(): Observable<PublicPlayerData[]> {
-        return this.firestore.collection<RawPublicPlayerData>(PUBLIC_PLAYERS_COL, ref => ref.orderBy('createdAtTimestamp')).valueChanges({idField: 'uid'}).pipe(map(collection => {
+        return this.firestore.collection<RawPublicPlayerData>(PUBLIC_PLAYERS_COL, ref => ref.where('active', '==', true).orderBy('createdAtTimestamp')).valueChanges({idField: 'uid'}).pipe(map(collection => {
             const players: PublicPlayerData[] = [];
 
             for (const doc of collection) {
                 console.log(doc);
 
                 players.push({
-                    uid: doc.uid,
-                    username: doc.username,
+                    uid: doc.uid || '',
+                    username: doc.username || '',
+                    active: !!doc.active,
                     createdAtDate: doc.createdAtTimestamp?.toDate() || undefined,
                     updatedAtDate: doc.updatedAtTimestamp?.toDate() || undefined,
+                });
+            }
+
+            return players;
+        }));
+    }
+    
+    public getPrivatePlayers(): Observable<PrivatePlayerData[]> {
+        return this.firestore.collection<RawPrivatePlayerData>(PRIVATE_PLAYERS_COL, ref => ref.where('active', '==', true).orderBy('createdAtTimestamp')).valueChanges({idField: 'uid'}).pipe(map(collection => {
+            const players: PrivatePlayerData[] = [];
+
+            for (const doc of collection) {
+                console.log(doc);
+
+                players.push({
+                    uid: doc.uid || '',
+                    username: doc.username || '',
+                    active: !!doc.active,
+                    createdAtDate: doc.createdAtTimestamp?.toDate() || undefined,
+                    updatedAtDate: doc.updatedAtTimestamp?.toDate() || undefined,
+
+                    peerID: doc.peerID,
+                    phoneNumber: doc.phoneNumber,
+                    emailAddress: doc.emailAddress,
+                    shippingAddress: doc.shippingAddress,
                 });
             }
 
