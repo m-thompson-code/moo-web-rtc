@@ -55,10 +55,15 @@
 <br>
 
 <div>
-    Public Players:
+    <div>
+        Public Players:
+    </div>
+    
     <div *ngFor="let publicPlayer of publicPlayersData.value">
         <div>UID: {{ publicPlayer.uid }} - Username: {{ publicPlayer.username }} - {{ publicPlayer.createdAtDate | date:'short' }}</div>
     </div>
+
+    <br>
 </div>
 
 <br>

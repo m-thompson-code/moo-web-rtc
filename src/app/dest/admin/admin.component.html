@@ -1,8 +1,62 @@
 <p>Admin</p>
 
 <div>
-    Private Players:
+    <div>
+        Private Players:
+    </div>
+
+    <br>
+
     <div *ngFor="let privatePlayer of privatePlayersData.value">
-        <div>UID: {{ privatePlayer.uid }} - Username: {{ privatePlayer.username }} - {{ privatePlayer.createdAtDate | date:'short' }} - peerID: {{ privatePlayer.peerID }}</div>
+        <div>UID: {{ privatePlayer.uid }} - Username: {{ privatePlayer.username }} - {{ privatePlayer.createdAtDate | date:'short' }} - peerID: {{ privatePlayer.peerID }}
+        <br><button (click)="setPlayer(privatePlayer)">SET AS CURRENT</button><button (click)="deactivatePlayer(privatePlayer.uid)">KICK</button></div>
+    </div>
+</div>
+
+<br>
+
+<div>
+    <div>
+        Current Private Player: 
+    </div>
+
+    <div *ngIf="!currentPrivatePlayersData.value">
+        (none)
+    </div>
+
+    <div *ngIf="currentPrivatePlayersData.value">
+        <div>
+            UID: {{ currentPrivatePlayersData.value.uid }}
+        </div>
+        <div>
+            Username: {{ currentPrivatePlayersData.value.username }}
+        </div>
+        <div>
+            Active: {{ !!currentPrivatePlayersData.value.active }}
+        </div>
+    
+        <div>
+            Created At: {{ currentPrivatePlayersData.value.createdAtDate | date:'short' }}
+        </div>
+        <div>
+            Updated At: {{ currentPrivatePlayersData.value.updatedAtDate | date:'short' }}
+        </div>
+    
+        <div>
+            peerID: {{ currentPrivatePlayersData.value.peerID }}
+        </div>
+        <div>
+            phoneNumber: {{ currentPrivatePlayersData.value.phoneNumber }}
+        </div>
+        <div>
+            emailAddress: {{ currentPrivatePlayersData.value.emailAddress }}
+        </div>
+        <div>
+            shippingAddress: {{ currentPrivatePlayersData.value.shippingAddress }}
+        </div>
+    
+        <div>
+            <button (click)="removeCurrentPlayer()">Remove (you'll still need to kick them off on the list for now)</button>
+        </div>
     </div>
 </div>

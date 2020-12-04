@@ -15,6 +15,11 @@ export class AdminComponent implements OnInit, OnDestroy {
         isPending: boolean;
     } = { value: [], isPending: true };
 
+    public currentPrivatePlayersData: {
+        value: PrivatePlayerData | undefined;
+        isPending: boolean;
+    } = { value: undefined, isPending: true };
+
     constructor(private firebaseService: FirebaseService) {
 
     }
@@ -36,6 +41,25 @@ export class AdminComponent implements OnInit, OnDestroy {
                 isPending: false,
             };
         });
+
+        this._sub.add(this.firebaseService.getCurrentPrivatePlayer().subscribe(privatePlayer => {
+            this.currentPrivatePlayersData = {
+                value: privatePlayer,
+                isPending: false,
+            };
+        }));
+    }
+
+    public setPlayer(privatePlayer: PrivatePlayerData): Promise<void> {
+        return this.firebaseService.setCurrentUser(privatePlayer);
+    }
+
+    public deactivatePlayer(playerUID: string): Promise<void> {
+        return this.firebaseService.deactivatePlayer(playerUID);
+    }
+
+    public removeCurrentPlayer(): Promise<void> {
+        return this.firebaseService.removeCurrentUser();
     }
 
     public ngOnDestroy(): void {

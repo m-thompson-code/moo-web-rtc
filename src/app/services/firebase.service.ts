@@ -113,6 +113,9 @@ export interface SetPlayerData {
 const PUBLIC_PLAYERS_COL = 'public_players';
 const PRIVATE_PLAYERS_COL = 'private_players';
 
+const CURRENT_PUBLIC_PLAYER_COL = 'public_current_player';
+const CURRENT_PRIVATE_PLAYER_COL = 'private_current_player';
+
 @Injectable({
     providedIn: 'root'
 })
@@ -161,6 +164,67 @@ export class FirebaseService {
         return batch.commit();
     }
 
+    public setCurrentUser(privatePlayerData: PrivatePlayerData): Promise<void> {
+        const batch = firebase.firestore().batch();
+
+        if (!this.authService.user) {
+            console.error("Unexpected missing auth user");
+            return Promise.resolve();
+        }
+
+        const currentPublicPlayerRef = firebase.firestore().collection(CURRENT_PUBLIC_PLAYER_COL).doc('current');
+        const currentPrivatePlayerRef = firebase.firestore().collection(CURRENT_PRIVATE_PLAYER_COL).doc('current');
+
+        const publicData: WritePublicPlayerData & { uid: string } = {
+            uid: privatePlayerData.uid,
+
+            username: privatePlayerData.username,
+            active: true,
+
+            createdAtTimestamp: privatePlayerData.createdAtDate as any,
+            updatedAtTimestamp: privatePlayerData.updatedAtDate as any,
+        };
+
+        batch.set(currentPublicPlayerRef, publicData);
+
+        const privateData: WritePrivatePlayerData & { uid: string } = {
+            uid: privatePlayerData.uid,
+
+            username: privatePlayerData.username || '',
+            active: !!privatePlayerData.active,
+            
+            createdAtTimestamp: privatePlayerData.createdAtDate as any,
+            updatedAtTimestamp: privatePlayerData.updatedAtDate as any,
+
+            peerID: privatePlayerData.peerID,
+            phoneNumber: privatePlayerData.phoneNumber,
+            emailAddress: privatePlayerData.emailAddress,
+            shippingAddress: privatePlayerData.shippingAddress,
+        };
+
+        batch.set(currentPrivatePlayerRef, privateData);
+
+        return batch.commit();
+    }
+
+    public removeCurrentUser(): Promise<void> {
+        const batch = firebase.firestore().batch();
+
+        if (!this.authService.user) {
+            console.error("Unexpected missing auth user");
+            return Promise.resolve();
+        }
+
+        const currentPublicPlayerRef = firebase.firestore().collection(CURRENT_PUBLIC_PLAYER_COL).doc('current');
+        const currentPrivatePlayerRef = firebase.firestore().collection(CURRENT_PRIVATE_PLAYER_COL).doc('current');
+
+        batch.delete(currentPublicPlayerRef);
+
+        batch.delete(currentPrivatePlayerRef);
+
+        return batch.commit();
+    }
+
     private _rawDataToPublicPlayerData(data: any): PublicPlayerData | undefined {
         if (!data) {
             return undefined;
@@ -179,6 +243,11 @@ export class FirebaseService {
 
     public getPublicPlayer(uid: string): Observable<PublicPlayerData | undefined> {
         return this.firestore.collection<RawPublicPlayerData>(PUBLIC_PLAYERS_COL).doc(uid).valueChanges({idField: 'uid'}).pipe(map(doc => {
+            // TODO: consider how to avoid using this hack (uid is injected causing doc to never be undefined)
+            if (!doc?.username) {
+                return undefined;
+            }
+            
             const player: PublicPlayerData | undefined = this._rawDataToPublicPlayerData(doc);
 
             return player;
@@ -228,6 +297,11 @@ export class FirebaseService {
 
     public getPrivatePlayer(uid: string): Observable<PrivatePlayerData | undefined> {
         return this.firestore.collection<RawPrivatePlayerData>(PRIVATE_PLAYERS_COL).doc(uid).valueChanges({idField: 'uid'}).pipe(map(doc => {
+            // TODO: consider how to avoid using this hack (uid is injected causing doc to never be undefined)
+            if (!doc?.username) {
+                return undefined;
+            }
+
             const player: PrivatePlayerData | undefined = this._rawDataToPrivatePlayerData(doc);
 
             return player;
@@ -250,5 +324,54 @@ export class FirebaseService {
 
             return players;
         }));
+    }
+
+    public getCurrentPublicPlayer(): Observable<PublicPlayerData | undefined> {
+        return this.firestore.collection<RawPublicPlayerData>(CURRENT_PUBLIC_PLAYER_COL).doc('current').valueChanges().pipe(map(doc => {
+            const player: PublicPlayerData | undefined = this._rawDataToPublicPlayerData(doc);
+
+            return player;
+        }));
+    }
+
+    public getCurrentPrivatePlayer(): Observable<PrivatePlayerData | undefined> {
+        return this.firestore.collection<RawPrivatePlayerData>(CURRENT_PRIVATE_PLAYER_COL).doc('current').valueChanges().pipe(map(doc => {
+
+            const player: PrivatePlayerData | undefined = this._rawDataToPrivatePlayerData(doc);
+
+            return player;
+        }));
+    }
+
+    public deactivatePlayer(uid: string): Promise<void> {
+        const batch = firebase.firestore().batch();
+
+        if (!this.authService.user) {
+            console.error("Unexpected missing auth user");
+            return Promise.resolve();
+        }
+
+        const publicPlayerRef = firebase.firestore().collection(PUBLIC_PLAYERS_COL).doc(uid);
+        const privatePlayerRef = firebase.firestore().collection(PRIVATE_PLAYERS_COL).doc(uid);
+
+        const timestampFieldValue: firebase.firestore.FieldValue = firebase.firestore.FieldValue.serverTimestamp();
+
+        const publicData = {
+            active: false,
+
+            updatedAtTimestamp: timestampFieldValue,
+        };
+
+        batch.set(publicPlayerRef, publicData);
+
+        const privateData = {
+            active: false,
+
+            updatedAtTimestamp: timestampFieldValue,
+        };
+
+        batch.set(privatePlayerRef, privateData);
+
+        return batch.commit();
     }
 }
