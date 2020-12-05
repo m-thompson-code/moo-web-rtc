@@ -100,14 +100,17 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "web-rtc:build"
+            "browserTarget": "web-rtc:build",
+            "host": "0.0.0.0"
           },
           "configurations": {
             "production": {
-              "browserTarget": "web-rtc:build:production"
+              "browserTarget": "web-rtc:build:production",
+              "host": "0.0.0.0"
             },
             "staging": {
-              "browserTarget": "web-rtc:build:staging"
+              "browserTarget": "web-rtc:build:staging",
+              "host": "0.0.0.0"
             }
           }
         },
