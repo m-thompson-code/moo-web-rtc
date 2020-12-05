@@ -13,6 +13,12 @@ export class VideoService {
 
     }
 
+    public pushPendingVideo(video: HTMLVideoElement): void {
+        this.handledRequiredInteraction = false;
+
+        this.videosToPlay.push(video);
+    }
+
     public playAllVideos(): void {
         // const videos = document.querySelectorAll('video');
 
@@ -21,6 +27,8 @@ export class VideoService {
         });
 
         this.videosToPlay = [];
+
+        this.handledRequiredInteraction = true;
     }
 
     public playVideo(video: HTMLVideoElement, attempt: number = 0): Promise<void> {
@@ -95,8 +103,6 @@ export class VideoService {
             video.src = URL.createObjectURL(stream);
         }
 
-        this.handledRequiredInteraction = false;
-
         const [track] = stream.getVideoTracks();
         track.addEventListener('ended', () => {
             this.ngZone.run(() => {
@@ -105,6 +111,8 @@ export class VideoService {
         });
 
         track.onended = () => console.log('track onended');
+
+        this.pushPendingVideo(video);
     }
 
     public removeVideoStream(mediaStream: MediaStream, video?: HTMLVideoElement): void {

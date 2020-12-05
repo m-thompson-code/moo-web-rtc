@@ -1,1 +1,102 @@
-<p>machine works!</p>
+<div>
+    MACHINE
+</div>
+
+<br>
+
+<div>
+    My (machine) peerID: peerID<br>
+    <button (click)="setMachinePeerID()">Update Machine to my (machine) peerID</button>
+</div>
+
+<br>
+
+<div>
+    <div>
+        Machine: 
+    </div>
+
+    <div *ngIf="!machineData.value">
+        (none)
+    </div>
+
+    <div *ngIf="machineData.value">
+        <div>
+            peerID: {{ machineData.value.peerID }}
+        </div>
+    </div>
+</div>
+
+<br>
+
+<div>
+    <div>
+        Current Private Player: 
+    </div>
+
+    <div *ngIf="!currentPrivatePlayersData.value">
+        (none)
+    </div>
+
+    <div *ngIf="currentPrivatePlayersData.value">
+        <div>
+            UID: {{ currentPrivatePlayersData.value.uid }}
+        </div>
+        <div>
+            Username: {{ currentPrivatePlayersData.value.username }}
+        </div>
+        <div>
+            Active: {{ !!currentPrivatePlayersData.value.active }}
+        </div>
+    
+        <div>
+            Created At: {{ currentPrivatePlayersData.value.createdAtDate | date:'short' }}
+        </div>
+        <div>
+            Updated At: {{ currentPrivatePlayersData.value.updatedAtDate | date:'short' }}
+        </div>
+    
+        <div>
+            peerID: {{ currentPrivatePlayersData.value.peerID }}
+        </div>
+        <div>
+            phoneNumber: {{ currentPrivatePlayersData.value.phoneNumber }}
+        </div>
+        <div>
+            emailAddress: {{ currentPrivatePlayersData.value.emailAddress }}
+        </div>
+        <div>
+            shippingAddress: {{ currentPrivatePlayersData.value.shippingAddress }}
+        </div>
+    </div>
+</div>
+
+<br>
+
+<div>
+    You (Machine):
+</div>
+<div class="video-container">
+    <video #video playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+    </video>
+</div>
+
+<div *ngIf="peerjsService.conn">
+    <form [formGroup]="formGroup" (ngSubmit)="submit()">
+        <input formControlName="send"><button type="submit">Send</button>
+    </form>
+<!-- 
+    <br>
+
+    <div>
+        <button (click)="call()">Call</button>
+    </div> -->
+</div>
+
+<div *ngFor="let data of datas">
+    {{ data.peerID }} {{ data.timestamp | date:'short' }}: {{ data.value }}
+</div>
+
+<div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
+    Click here to start
+</div>

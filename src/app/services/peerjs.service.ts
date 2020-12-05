@@ -40,9 +40,9 @@ export class PeerjsService {
 
         this.debugLevel = +(sessionStorage.getItem('debug-level') || 0) as any;
 
-        if (environment.env !== 'dev') {
+        // if (environment.env !== 'dev') {
             this.server = 'remote';
-        }
+        // }
     }
 
     public getRandomPeerID(): string {
@@ -286,24 +286,27 @@ export class PeerjsService {
         // });
     }
 
-    public call(peerID: string): void {
-        // TODO: prevent calling unless peer is the 'streamer' peer
-        navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
+    public call(peerID: string, stream: MediaStream): void {
+        // // TODO: prevent calling unless peer is the 'streamer' peer
+        // navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
         
-        navigator.getUserMedia({video: true, audio: true}, stream => {
-            this.ngZone.run(() => {
-                const call = this.peer?.call(peerID, stream);
-                console.log(call);
+        // navigator.getUserMedia({video: true, audio: true}, stream => {
+        //     this.ngZone.run(() => {
+        //         const call = this.peer?.call(peerID, stream);
+        //         console.log(call);
 
-                // this.myStream = stream;
-                // this.bindVideoStream(this.myVideo.nativeElement, stream);    
+        //         // this.myStream = stream;
+        //         // this.bindVideoStream(this.myVideo.nativeElement, stream);    
                 
-                console.log(stream);
-            });
-        }, error => {
-            this.ngZone.run(() => {
-                console.error(error);
-            });
-        });
+        //         console.log(stream);
+        //     });
+        // }, error => {
+        //     this.ngZone.run(() => {
+        //         console.error(error);
+        //     });
+        // });
+
+        const call = this.peer?.call(peerID, stream);
+        console.log(this.peer, call);
     }
 }

@@ -28,7 +28,6 @@ export class AdminComponent implements OnInit, OnDestroy {
         this._init();
     }
 
-    
     public _init(): void {
         this.privatePlayersData = {
             value: [],

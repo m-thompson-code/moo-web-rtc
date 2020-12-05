@@ -163,12 +163,12 @@ export class RootComponent implements OnInit, OnDestroy {
         });
     }
 
-    public call(): void {
-        this.peerjsService.call(this.peerjsService.peerID === 'moocow-a' ? 'moocow-b' : 'moocow-a')
-    }
+    // public call(): void {
+    //     this.peerjsService.call(this.peerjsService.peerID === 'moocow-a' ? 'moocow-b' : 'moocow-a')
+    // }
 
     public submit(): void {
-        const sendFormControl = this.setPlayerFormGroup.get('username');
+        const sendFormControl = this.formGroup.get('send');
 
         if (!sendFormControl) {
             return;

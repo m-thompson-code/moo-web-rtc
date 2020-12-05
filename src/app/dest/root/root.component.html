@@ -1,3 +1,9 @@
+<div>
+    HOME
+</div>
+
+<br>
+
 <div *ngIf="myPrivatePlayerData.value">
     <div>
         My private player data
@@ -91,12 +97,12 @@
     <form [formGroup]="formGroup" (ngSubmit)="submit()">
         <input formControlName="send"><button type="submit">Send</button>
     </form>
-
+<!-- 
     <br>
 
     <div>
         <button (click)="call()">Call</button>
-    </div>
+    </div> -->
 </div>
 
 <div *ngFor="let data of datas">
@@ -105,16 +111,16 @@
 
 <br>
 
-<div>
+<!-- <div>
     You:
 </div>
 <div class="video-container">
     <video #myVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
     </video>
-</div>
+</div> -->
 
 <div>
-    Them:
+    Them (Machine):
 </div>
 <div class="video-container">
     <video #theirVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">

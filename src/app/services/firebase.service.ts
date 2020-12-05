@@ -21,6 +21,21 @@ import { AuthService } from './auth.service';
 
 // import { environment } from '@environment';
 
+export interface WriteMachineData {
+    peerID: string;
+    updatedAtTimestamp: firebase.firestore.FieldValue;
+}
+
+export interface RawMachineData {
+    peerID: string;
+    updatedAtDate: firebase.firestore.Timestamp;
+}
+
+export interface MachineData {
+    peerID: string;
+    updatedAtDate: firebase.firestore.Timestamp;
+}
+
 export interface WritePublicPlayerData {
     username: string;
     active: boolean;
@@ -115,6 +130,8 @@ const PRIVATE_PLAYERS_COL = 'private_players';
 
 const CURRENT_PUBLIC_PLAYER_COL = 'public_current_player';
 const CURRENT_PRIVATE_PLAYER_COL = 'private_current_player';
+
+const MACHINE_COL = 'machine';
 
 @Injectable({
     providedIn: 'root'
@@ -362,7 +379,7 @@ export class FirebaseService {
             updatedAtTimestamp: timestampFieldValue,
         };
 
-        batch.set(publicPlayerRef, publicData);
+        batch.update(publicPlayerRef, publicData);
 
         const privateData = {
             active: false,
@@ -373,5 +390,45 @@ export class FirebaseService {
         batch.set(privatePlayerRef, privateData);
 
         return batch.commit();
+    }
+    
+    public setMachineData(peerID: string): Promise<void> {
+        const batch = firebase.firestore().batch();
+
+        if (!this.authService.user) {
+            console.error("Unexpected missing auth user");
+            return Promise.resolve();
+        }
+
+        const machineRef = firebase.firestore().collection(MACHINE_COL).doc('machine');
+
+        const timestampFieldValue: firebase.firestore.FieldValue = firebase.firestore.FieldValue.serverTimestamp();
+
+        const machineData = {
+            peerID: peerID,
+
+            updatedAtTimestamp: timestampFieldValue,
+        };
+
+        batch.set(machineRef, machineData);
+
+        return batch.commit();
+    }
+
+    private _rawDataToMachineData(data: any): MachineData | undefined {
+        const machineData: MachineData = {
+            peerID: data?.peerID || '',
+            updatedAtDate: data?.updatedAtTimestamp?.toDate() || undefined,
+        };
+
+        return machineData;
+    }
+
+    public getMachineData(): Observable<MachineData | undefined> {
+        return this.firestore.collection<RawPublicPlayerData>(MACHINE_COL).doc('machine').valueChanges().pipe(map(doc => {
+            const machine: MachineData | undefined = this._rawDataToMachineData(doc);
+
+            return machine;
+        }));
     }
 }
