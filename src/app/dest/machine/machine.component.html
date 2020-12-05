@@ -81,6 +81,10 @@
     </video>
 </div>
 
+<div *ngIf="currentPrivatePlayersData.value">
+    <button (click)="connect()">Connect to current player</button>
+</div>
+
 <div *ngIf="peerjsService.conn">
     <form [formGroup]="formGroup" (ngSubmit)="submit()">
         <input formControlName="send"><button type="submit">Send</button>

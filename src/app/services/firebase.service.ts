@@ -425,7 +425,7 @@ export class FirebaseService {
     }
 
     public getMachineData(): Observable<MachineData | undefined> {
-        return this.firestore.collection<RawPublicPlayerData>(MACHINE_COL).doc('machine').valueChanges().pipe(map(doc => {
+        return this.firestore.collection<RawMachineData>(MACHINE_COL).doc('machine').valueChanges().pipe(map(doc => {
             const machine: MachineData | undefined = this._rawDataToMachineData(doc);
 
             return machine;

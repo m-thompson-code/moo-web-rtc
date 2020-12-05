@@ -5,7 +5,7 @@ import { Subscription } from 'rxjs';
 import firebase from 'firebase/app';
 
 import { AuthService } from '@app/services/auth.service';
-import { FirebaseService, PrivatePlayerData, PublicPlayerData } from '@app/services/firebase.service';
+import { FirebaseService, MachineData, PrivatePlayerData, PublicPlayerData } from '@app/services/firebase.service';
 import { PeerjsService } from '@app/services/peerjs.service';
 import { VideoService } from '@app/services/video.service';
 
@@ -48,6 +48,11 @@ export class RootComponent implements OnInit, OnDestroy {
     private _sub2?: Subscription;
     private _sub3?: Subscription;
 
+    public currentPublicPlayersData: {
+        value: PublicPlayerData | undefined;
+        isPending: boolean;
+    } = { value: undefined, isPending: true };
+
     public publicPlayersData: {
         value: PublicPlayerData[];
         isPending: boolean;
@@ -55,6 +60,11 @@ export class RootComponent implements OnInit, OnDestroy {
 
     public myPrivatePlayerData: {
         value?: PrivatePlayerData;
+        isPending: boolean;
+    } = { value: undefined, isPending: true };
+
+    public machineData: {
+        value: MachineData | undefined;
         isPending: boolean;
     } = { value: undefined, isPending: true };
 
@@ -96,11 +106,11 @@ export class RootComponent implements OnInit, OnDestroy {
 
         // console.log(f);
 
-        const oldID: any = sessionStorage.getItem('my-id');
+        // const oldID: any = sessionStorage.getItem('my-id');
 
-        if (oldID) {
-            this.getPeer(oldID);
-        }
+        // if (oldID) {
+        //     this.getPeer(oldID);
+        // }
     }
 
     public _init(): void {
@@ -118,6 +128,13 @@ export class RootComponent implements OnInit, OnDestroy {
                 isPending: false,
             };
         });
+        
+        this._sub.add(this.firebaseService.getCurrentPublicPlayer().subscribe(publicPlayer => {
+            this.currentPublicPlayersData = {
+                value: publicPlayer,
+                isPending: false,
+            };
+        }));
 
         this._sub2?.unsubscribe();
 
@@ -142,13 +159,21 @@ export class RootComponent implements OnInit, OnDestroy {
                     value: privatePlayer,
                     isPending: false,
                 };
+
+                if (this.myPrivatePlayerData.value?.peerID) {
+                    this.getPeer(this.myPrivatePlayerData.value?.peerID);
+                } else {
+                    this.peerjsService.destroyPeer();
+                }
             });
         }
     }
     
     public getPeer(peerID: string): void {
         const onOpen = () => {
-            this.peerjsService.connect();
+            if (this.machineData.value?.peerID) {
+                this.peerjsService.connect(this.machineData.value.peerID);
+            }
         };
 
         this.peerjsService.getPeer(peerID, {
@@ -159,6 +184,12 @@ export class RootComponent implements OnInit, OnDestroy {
                     value: data,
                     timestamp: Date.now(),
                 });
+            },
+            onCall: (conn, stream) => {
+                console.log(conn, stream);
+                
+                this.videoService.pushPendingVideo(this.theirVideo.nativeElement);
+                this.videoService.bindVideoStream(this.theirVideo.nativeElement, stream);
             }
         });
     }
@@ -232,6 +263,16 @@ export class RootComponent implements OnInit, OnDestroy {
     public handleRequiredInteraction(): void {
         this.videoService.playAllVideos();
         this.videoService.handledRequiredInteraction = true;
+    }
+
+    public connect(): void {
+        console.error("stub");
+        // if (!this.machineData.value?.peerID) {
+        //     console.warn("Unexpected missing machine peerID");
+        //     return;
+        // }
+
+        // this.peerjsService.connect(this.machineData.value.peerID);
     }
 
     public ngOnDestroy(): void {

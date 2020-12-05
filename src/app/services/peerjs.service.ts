@@ -1,10 +1,11 @@
 import { Injectable, NgZone } from '@angular/core';
-import { environment } from '@environment';
 
 import firebase from 'firebase/app';
 
 import Peer from 'peerjs';
 import util from 'peerjs';
+import { Observable, Subscription } from 'rxjs';
+import { FirebaseService, MachineData } from './firebase.service';
 
 const REMOTE_SERVER_HOST = 'moo-web-rtc-server.uc.r.appspot.com';
 
@@ -16,6 +17,7 @@ export type OnDataFunc = (
 export interface GetPeerOptions {
     onOpen?: () => void;
     onData?: OnDataFunc;
+    onCall?: (conn: Peer.MediaConnection, stream: MediaStream) => void;
 }
 
 @Injectable({
@@ -35,7 +37,7 @@ export class PeerjsService {
 
     public peerState: 'off' | 'opening' | 'open' | 'connecting' | 'connected' = 'off';
 
-    constructor(private ngZone: NgZone) {
+    constructor(private ngZone: NgZone, private firebaseService: FirebaseService) {
         console.log(util);
 
         this.debugLevel = +(sessionStorage.getItem('debug-level') || 0) as any;
@@ -49,19 +51,20 @@ export class PeerjsService {
         return firebase.firestore().collection("tmp").doc().id;
     }
 
-    public getReceiverPeerID(): Promise<string> {
-        return Promise.resolve(this.peerID === 'moocow-a' ? 'moocow-b' : 'moocow-a');
-        // return Promise.resolve('moo-web-rtc-receiver-peer-id');
-    }
-
-    public getPeer(peerID: string, options: GetPeerOptions): Peer {
-        this.peerID = peerID;
-        
+    public destroyPeer(): void {
         if (this.peer) {
             this.peer.destroy();
         }
 
+        this.peerID = '';
+
         this.peerState = 'off';
+    }
+
+    public getPeer(peerID: string, options: GetPeerOptions): Peer {
+        this.destroyPeer();
+
+        this.peerID = peerID;
 
         this.peer = new Peer(this.peerID, {
             debug: this.debugLevel || 0,
@@ -165,6 +168,8 @@ export class PeerjsService {
 
                         // this.bindVideoStream(this.theirVideo.nativeElement, stream);
                         console.log(stream);
+
+                        options.onCall && options.onCall(conn, stream);
                     });
                 });
             });
@@ -197,41 +202,39 @@ export class PeerjsService {
         return this.peer;
     }
 
-    public connect(): Promise<Peer.PeerConnectOption | null> {
+    public connect(otherPeerID: string): Peer.PeerConnectOption | null {
         if (!this.peer) {
             console.warn("Unexpected missing peer. Cannot connect without a peer (0)");
-            return Promise.resolve(null);
+            return null;
         }
 
-        return this.getReceiverPeerID().then(otherPeerID => {
-            if (!this.peer) {
-                console.warn("Unexpected missing peer. Cannot connect without a peer (1)");
-                return Promise.resolve(null);
-            }
+        if (!this.peer) {
+            console.warn("Unexpected missing peer. Cannot connect without a peer (1)");
+            return null;
+        }
 
-            const conn = this.peer.connect(otherPeerID, {
-                serialization: 'json'// Safari support: https://github.com/peers/peerjs#safari
-            });
-    
-            conn.on('close', () => {
-                this.ngZone.run(() => {
-                    console.log("connect() conn - close");
-    
-                    this.disconnect();
-                });
-            });
-            
-            conn.on('error', (error) => {
-                this.ngZone.run(() => {
-                    console.log("connect() conn - error");
-                    console.error(error);
-                });
-            });
-
-            this.conn = conn;
-
-            return conn;
+        const conn = this.peer.connect(otherPeerID, {
+            serialization: 'json'// Safari support: https://github.com/peers/peerjs#safari
         });
+
+        conn.on('close', () => {
+            this.ngZone.run(() => {
+                console.log("connect() conn - close");
+
+                this.disconnect();
+            });
+        });
+        
+        conn.on('error', (error) => {
+            this.ngZone.run(() => {
+                console.log("connect() conn - error");
+                console.error(error);
+            });
+        });
+
+        this.conn = conn;
+
+        return conn;
     }
 
     public disconnect() {

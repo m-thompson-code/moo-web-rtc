@@ -56,7 +56,7 @@ export class MachineComponent implements OnInit, OnDestroy {
         this.peerID = this.peerjsService.getRandomPeerID();
 
         const onOpen = () => {
-            this.peerjsService.connect();
+            this.connect();
         };
 
         this.peerjsService.getPeer(this.peerID, {
@@ -131,6 +131,19 @@ export class MachineComponent implements OnInit, OnDestroy {
                 timestamp: Date.now(),
             });
         });
+    }
+
+    public connect(): void {
+        if (!this.currentPrivatePlayersData.value?.peerID) {
+            console.warn("Unexpected missing player peerID");
+            return;
+        }
+
+        this.peerjsService.connect(this.currentPrivatePlayersData.value.peerID);
+
+        if (this.myStream && this.currentPrivatePlayersData.value) {
+            this.peerjsService.call(this.currentPrivatePlayersData.value.peerID, this.myStream);                
+        }
     }
 
     public ngOnDestroy(): void {

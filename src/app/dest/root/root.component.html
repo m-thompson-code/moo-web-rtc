@@ -84,9 +84,10 @@
 
 <br>
 
-<div *ngIf="otherID && !peerjsService.conn">
-    <a (click)="peerjsService.connect()">Connect</a>
-</div>
+<!-- <div *ngIf="machineData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.peerID === currentPublicPlayersData.value?.peerID">
+    <button (click)="connect()">Connect to machine</button>
+</div> -->
+
 <div *ngIf="otherID && peerjsService.conn">
     <a (click)="peerjsService.disconnect()">Disconnect</a>
 </div>
