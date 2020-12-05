@@ -73,7 +73,8 @@ export class MachineComponent implements OnInit, OnDestroy {
         // TODO: prevent calling unless peer is the 'streamer' peer
         navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
         
-        navigator.getUserMedia({video: true, audio: true}, stream => {
+        // TODO: Bring back audio (just for testing)
+        navigator.getUserMedia({video: true, audio: false}, stream => {
             this.myStream = stream;
             this.videoService.bindVideoStream(this.video.nativeElement, stream);
 

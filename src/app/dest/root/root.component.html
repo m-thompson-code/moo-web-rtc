@@ -4,6 +4,28 @@
 
 <br>
 
+<div *ngIf="machineData.value">
+    <div>
+        global machine peerID: {{ machineData.value.peerID }}
+    </div>
+</div>
+
+<br>
+
+<div>
+    <div>
+        Public Players:
+    </div>
+    
+    <div *ngFor="let publicPlayer of publicPlayersData.value; let i = index">
+        <div>{{ i + 1 }} UID: {{ publicPlayer.uid }} - Username: {{ publicPlayer.username }} - {{ publicPlayer.createdAtDate | date:'short' }}</div>
+    </div>
+
+    <br>
+</div>
+
+<br>
+
 <div *ngIf="myPrivatePlayerData.value">
     <div>
         My private player data
@@ -61,32 +83,14 @@
 <br>
 
 <div>
-    <div>
-        Public Players:
-    </div>
-    
-    <div *ngFor="let publicPlayer of publicPlayersData.value">
-        <div>UID: {{ publicPlayer.uid }} - Username: {{ publicPlayer.username }} - {{ publicPlayer.createdAtDate | date:'short' }}</div>
-    </div>
-
-    <br>
-</div>
-
-<br>
-
-<div>
-    <a (click)="getPeer('moocow-a')">PEER A (moocow-a)</a> | <a (click)="getPeer('moocow-b')">PEER B (moocow-b)</a>
-</div>
-
-<div>
     Peer: {{ peerjsService.peer?.id || 'none' }}
 </div>
 
 <br>
 
-<!-- <div *ngIf="machineData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.peerID === currentPublicPlayersData.value?.peerID">
+<div *ngIf="machineData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid">
     <button (click)="connect()">Connect to machine</button>
-</div> -->
+</div>
 
 <div *ngIf="otherID && peerjsService.conn">
     <a (click)="peerjsService.disconnect()">Disconnect</a>

@@ -5,7 +5,7 @@
 <br>
 
 <div>
-    My (machine) peerID: peerID<br>
+    My (machine) peerID: {{ peerID }} {{ peerID === machineData.value?.peerID ? 'same as global machine' : '' }}<br>
     <button (click)="setMachinePeerID()">Update Machine to my (machine) peerID</button>
 </div>
 
@@ -22,7 +22,7 @@
 
     <div *ngIf="machineData.value">
         <div>
-            peerID: {{ machineData.value.peerID }}
+            global machine peerID: {{ machineData.value.peerID }} {{ peerID === machineData.value?.peerID ? 'same as global machine' : '' }}
         </div>
     </div>
 </div>

@@ -48,7 +48,7 @@ export class RootComponent implements OnInit, OnDestroy {
     private _sub2?: Subscription;
     private _sub3?: Subscription;
 
-    public currentPublicPlayersData: {
+    public currentPublicPlayerData: {
         value: PublicPlayerData | undefined;
         isPending: boolean;
     } = { value: undefined, isPending: true };
@@ -130,7 +130,7 @@ export class RootComponent implements OnInit, OnDestroy {
         });
         
         this._sub.add(this.firebaseService.getCurrentPublicPlayer().subscribe(publicPlayer => {
-            this.currentPublicPlayersData = {
+            this.currentPublicPlayerData = {
                 value: publicPlayer,
                 isPending: false,
             };
@@ -193,10 +193,6 @@ export class RootComponent implements OnInit, OnDestroy {
             }
         });
     }
-
-    // public call(): void {
-    //     this.peerjsService.call(this.peerjsService.peerID === 'moocow-a' ? 'moocow-b' : 'moocow-a')
-    // }
 
     public submit(): void {
         const sendFormControl = this.formGroup.get('send');
@@ -267,12 +263,12 @@ export class RootComponent implements OnInit, OnDestroy {
 
     public connect(): void {
         console.error("stub");
-        // if (!this.machineData.value?.peerID) {
-        //     console.warn("Unexpected missing machine peerID");
-        //     return;
-        // }
+        if (!this.machineData.value?.peerID) {
+            console.warn("Unexpected missing machine peerID");
+            return;
+        }
 
-        // this.peerjsService.connect(this.machineData.value.peerID);
+        this.peerjsService.connect(this.machineData.value.peerID);
     }
 
     public ngOnDestroy(): void {
