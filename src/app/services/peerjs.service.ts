@@ -64,6 +64,10 @@ export class PeerWrapper {
     public peerState: 'pending' | 'initalizing' | 'open' | 'connecting' | 'connected' | 'off' = 'pending';
 
     public peerID: string;
+
+    /**
+     * Use setOtherPeerID to make sure connections are properly disconnected, etc
+     */
     public otherPeerID?: string;
 
     public mediaStream?: MediaStream;
@@ -499,6 +503,20 @@ export class PeerWrapper {
         }
 
         console.error(error);
+    }
+
+    /**
+     * Sets otherPeerID and calls onOpen
+     * @param otherPeerID value for the other peerID, if it's different, peer will disconnect all existing connections and call onOpen
+     */
+    public setOtherPeerID(otherPeerID: string): void {
+        if (this.otherPeerID !== otherPeerID) {
+            this.disconnectConnections();
+        }
+
+        this.otherPeerID = otherPeerID;
+
+        this.options.onPeerInitalized && this.options.onPeerInitalized() || this._defaultOnPeerOpen();
     }
 
     public destroy(): void {

@@ -4,9 +4,9 @@
 
 <br>
 
-<div *ngIf="machineData.value">
+<div *ngIf="currentPublicPlayerData.value">
     <div>
-        global machine peerID: {{ machineData.value.peerID }}
+        <span class="bold">global machine peerID: {{ machineData.value?.peerID || '(none)' }}</span>
     </div>
 </div>
 
@@ -34,7 +34,7 @@
     <br>
 
     <div>
-        peerID: {{ myPrivatePlayerData.value.peerID }}
+        <span class="bold">peerID: {{ myPrivatePlayerData.value.peerID }}</span>
     </div>
 
     <!-- <br>
@@ -89,32 +89,46 @@
 <br>
 
 <div>
-    Peer: {{ peer?.peerID || 'none' }}
-</div>
+    <div>
+        Current Player: 
+    </div>
 
+    <div *ngIf="!currentPublicPlayerData.value">
+        (none)
+    </div>
+
+    <div>
+        <div>
+            UID: {{ currentPublicPlayerData.value?.uid || '...' }} {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
+        </div>
+        <div>
+            Your UID: {{ myPrivatePlayerData.value?.uid || '...' }} {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
+        </div>
+
+        <br>
+        
+        <div class="video-container" [ngClass]="{'hide': !peer?.requestedCallConnection}">
+            <div>
+                Machine MediaStream:
+            </div>
+
+            <video #machineVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+            </video>
+        </div>
+
+
+        <div *ngIf="currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid && !peer?.sentConnection">
+            <br>
+
+            <button (click)="connect()">Connect to machine</button>
+        </div>
+    </div>
+</div>
 
 <br>
 
-<div>
-    Them (Machine):
-</div>
-<div class="video-container">
-    <video #machineVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
-    </video>
-</div>
-
-<div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
-    Click here to start
-</div>
-
-<br>
-
-<div *ngIf="machineData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid && !peer?.sentConnection">
-    <button (click)="connect()">Connect to machine</button>
-</div>
-
-<div *ngIf="machineData.value?.peerID && peer?.sentConnection">
-    <a (click)="peer?.disconnectConnections()">Disconnect</a>
+<div *ngIf="peer?.sentConnection">
+    <button (click)="peer?.disconnectConnections()">Disconnect connections</button>
 </div>
 
 <br>
@@ -125,6 +139,12 @@
     </form>
 </div>
 
+<br>
+
 <div *ngFor="let data of datas">
     {{ data.peerID }} {{ data.timestamp | date:'short' }}: {{ data.value }}
+</div>
+
+<div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
+    Click here to start
 </div>

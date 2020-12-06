@@ -98,12 +98,8 @@ export class MachineComponent implements OnInit, OnDestroy {
                 isPending: false,
             };
 
-            if (this.peer) {
-                this.connect();
-            }
-
-            if (this.myStream && this.currentPrivatePlayersData.value) {
-                this.call();            
+            if (this.currentPrivatePlayersData.value?.peerID) {
+                this.peer?.setOtherPeerID(this.currentPrivatePlayersData.value.peerID);
             }
         });
 
@@ -159,6 +155,7 @@ export class MachineComponent implements OnInit, OnDestroy {
 
     public ngOnDestroy(): void {
         this.peer?.destroy();
+        
         this._sub?.unsubscribe();
     }
 }

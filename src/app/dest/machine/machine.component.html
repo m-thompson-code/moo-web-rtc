@@ -5,13 +5,6 @@
 <br>
 
 <div>
-    My (machine) peerID: {{ peerID }} {{ peerID === machineData.value?.peerID ? 'same as global machine' : '' }}<br>
-    <button (click)="setMachinePeerID()">Update Machine to my (machine) peerID</button>
-</div>
-
-<br>
-
-<div>
     <div>
         Machine: 
     </div>
@@ -22,7 +15,14 @@
 
     <div *ngIf="machineData.value">
         <div>
-            global machine peerID: {{ machineData.value.peerID }} {{ peerID === machineData.value?.peerID ? 'same as global machine' : '' }}
+            global machine peerID: {{ machineData.value.peerID }} {{ peerID === machineData.value?.peerID ? 'you are the global machine' : '' }}
+        </div>
+
+        <br>
+
+        <div>
+            My (machine) peerID: <span class="bold">{{ peerID }}</span> {{ peerID === machineData.value?.peerID ? 'you are the global machine' : '' }}<br>
+            <button (click)="setMachinePeerID()">Update Machine to my (machine) peerID</button>
         </div>
     </div>
 </div>
@@ -42,7 +42,7 @@
 
     <div *ngIf="currentPrivatePlayersData.value">
         <div>
-            peerID: {{ currentPrivatePlayersData.value.peerID }}
+            <span class="bold">peerID: {{ currentPrivatePlayersData.value.peerID }}</span>
         </div>
 <!-- 
         <br>
@@ -79,29 +79,30 @@
 <br>
 
 <div>
-    You (Machine):
+    Your MediaStream
 </div>
+
 <div class="video-container">
     <video #video playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
     </video>
 </div>
 
 <div *ngIf="currentPrivatePlayersData.value">
+    <br>
+
     <button (click)="connect()">Connect current player</button>
     <button (click)="call()">Call current player</button>
 </div>
+
+<br>
 
 <div *ngIf="peer?.sentConnection">
     <form [formGroup]="formGroup" (ngSubmit)="submit()">
         <input formControlName="send"><button type="submit">Send</button>
     </form>
-<!-- 
-    <br>
-
-    <div>
-        <button (click)="call()">Call</button>
-    </div> -->
 </div>
+
+<br>
 
 <div *ngFor="let data of datas">
     {{ data.peerID }} {{ data.timestamp | date:'short' }}: {{ data.value }}

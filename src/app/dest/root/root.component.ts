@@ -113,6 +113,14 @@ export class RootComponent implements OnInit, OnDestroy {
                 value: publicPlayer,
                 isPending: false,
             };
+
+            if (this.currentPublicPlayerData.value?.uid !== this.myPrivatePlayerData.value?.uid) {
+                this.peer?.disconnectConnections();
+            } else {
+                if (this.machineData.value) {
+                    this.peer?.setOtherPeerID(this.machineData.value.peerID);
+                }
+            }
         }));
 
         this._sub.add(this.firebaseService.getMachineData().subscribe(machine => {
@@ -120,6 +128,10 @@ export class RootComponent implements OnInit, OnDestroy {
                 value: machine,
                 isPending: false,
             };
+
+            if (this.machineData.value) {
+                this.peer?.setOtherPeerID(this.machineData.value.peerID);
+            }
         }));
 
         this._sub2?.unsubscribe();
@@ -263,6 +275,8 @@ export class RootComponent implements OnInit, OnDestroy {
     }
 
     public ngOnDestroy(): void {
+        this.peer?.destroy();
+        
         this._sub?.unsubscribe();
         this._sub2?.unsubscribe();
         this._sub3?.unsubscribe();
