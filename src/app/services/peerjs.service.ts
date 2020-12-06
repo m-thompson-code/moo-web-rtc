@@ -111,12 +111,6 @@ export class PeerjsService {
                                     data,
                                     conn.peer,
                                 );
-
-                                // this.datas.push({
-                                //     peerID: conn.peer,
-                                //     value: data.value || data,
-                                //     timestamp: Date.now(),
-                                // });
                             });
                         });
                     });
@@ -157,16 +151,6 @@ export class PeerjsService {
 
                 conn.on('stream', stream => {
                     this.ngZone.run(() => {
-                        // `stream` is the MediaStream of the remote peer.
-                        // Here you'd add it to an HTML video/canvas element.
-
-                        // if (this.theirStream) {
-                        //     this.stopTracks(this.theirStream);
-                        // }
-
-                        // this.theirStream = stream;
-
-                        // this.bindVideoStream(this.theirVideo.nativeElement, stream);
                         console.log(stream);
 
                         options.onCall && options.onCall(conn, stream);
@@ -214,7 +198,7 @@ export class PeerjsService {
         }
 
         const conn = this.peer.connect(otherPeerID, {
-            serialization: 'json'// Safari support: https://github.com/peers/peerjs#safari
+            serialization: 'json'// Required for Safari support: https://github.com/peers/peerjs#safari
         });
 
         conn.on('close', () => {
@@ -238,17 +222,8 @@ export class PeerjsService {
     }
 
     public disconnect() {
+        // TODO: add onDisconnect to clean up MediaStream stuff
         console.log("disconnect", this.conn, this.peerConn, this.callConn);
-
-        // this.handledRequiredInteraction = true;
-
-        // if (this.theirStream) {
-        //     this.removeVideoStream(this.theirStream, this.theirVideo.nativeElement);
-        // }
-
-        // if (this.myStream) {
-        //     this.removeVideoStream(this.myStream, this.myVideo.nativeElement);
-        // }
 
         if (this.conn) {
             this.conn.close();
@@ -281,34 +256,9 @@ export class PeerjsService {
             data,
             this.peer.id,
         );
-
-        // this.datas.push({
-        //     peerID: this.peer?.id || '',
-        //     value: data.value,
-        //     timestamp: Date.now(),
-        // });
     }
 
     public call(peerID: string, stream: MediaStream): void {
-        // // TODO: prevent calling unless peer is the 'streamer' peer
-        // navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
-        
-        // navigator.getUserMedia({video: true, audio: true}, stream => {
-        //     this.ngZone.run(() => {
-        //         const call = this.peer?.call(peerID, stream);
-        //         console.log(call);
-
-        //         // this.myStream = stream;
-        //         // this.bindVideoStream(this.myVideo.nativeElement, stream);    
-                
-        //         console.log(stream);
-        //     });
-        // }, error => {
-        //     this.ngZone.run(() => {
-        //         console.error(error);
-        //     });
-        // });
-
         const call = this.peer?.call(peerID, stream);
         console.log(this.peer, call);
     }
