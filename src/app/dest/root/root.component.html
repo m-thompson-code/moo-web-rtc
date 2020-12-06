@@ -109,7 +109,7 @@
 
 <br>
 
-<div *ngIf="machineData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid">
+<div *ngIf="machineData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid && !peer?.sentConnection">
     <button (click)="connect()">Connect to machine</button>
 </div>
 

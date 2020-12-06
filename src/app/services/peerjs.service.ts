@@ -190,6 +190,7 @@ export class PeerWrapper {
                 // Reject calls if you are the caller
                 // Also avoid calls from any peer that doesn't have the otherPeerID
                 if (this.options.isCaller || conn.peer !== this.otherPeerID) {
+                    console.warn("Unexpected call received from caller or peerID wasn't the expected otherPeerID");
                     conn.close();
                     return;
                 }
@@ -394,6 +395,10 @@ export class PeerWrapper {
         this.otherPeerID = otherPeerID || this.otherPeerID;
         this.mediaStream = mediaStream || this.mediaStream;
 
+        if (!this.options.isCaller) {
+            throw new Error("Unexpected call called from peer that isn't the  caller");
+        }
+
         if (!this.otherPeerID) {
             throw new Error("Unexpected missing otherPeerID");
         }
@@ -402,9 +407,12 @@ export class PeerWrapper {
             throw new Error("Unexpected missing mediaStream");
         }
 
-        const conn = this.peer?.call(this.otherPeerID, this.mediaStream);
+        if (this.sentCallConnection) {
+            this.sentCallConnection.close();
+            this.sentCallConnection = undefined;
+        }
 
-        this.sentCallConnection = conn;
+        const conn = this.peer.call(this.otherPeerID, this.mediaStream);
 
         // Reject calling if peer is not the caller
         // Also avoid calls from any peer that doesn't have the otherPeerID
@@ -412,11 +420,6 @@ export class PeerWrapper {
             conn.close();
 
             throw new Error("Unexpected call from a peer that is not the caller");
-        }
-
-        if (this.sentCallConnection) {
-            this.sentCallConnection.close();
-            this.sentCallConnection = undefined;
         }
 
         this.sentCallConnection = conn;
@@ -455,7 +458,7 @@ export class PeerWrapper {
             });
         });
 
-        console.log('call made', this.peer, conn);
+        console.log('call made', this.peer, conn, mediaStream);
 
         return conn;
     }
