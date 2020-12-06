@@ -9,6 +9,11 @@ import { FirebaseService } from './firebase.service';
 
 const REMOTE_SERVER_HOST = 'moo-web-rtc-server.uc.r.appspot.com';
 
+export type OnDataFunc = (
+    data: any,
+    peerID: string,
+) => void;
+
 interface _PeerWrapperInit {
     peerID: string;
     otherPeerID?: string;
@@ -102,9 +107,16 @@ export class PeerWrapper {
         // This is when using Peer.DataConnection/Peer.MediaConnection are ready to be used
         this.peerState = 'initalizing';
 
-        this.peer.on('open', (peerID) => {
+        this.peer.on('open', (peerID: string) => {
             this.ngZone.run(() => {
                 console.log("peer - open", peerID);
+
+                if (peerID !== this.peerID) {
+                    console.error("Unexpected peerID wasn't this peer peerID");
+                    return;
+                }
+
+                console.log("initalized", this.peerID);
 
                 this.peerState = 'open';
 
@@ -113,7 +125,7 @@ export class PeerWrapper {
         });
         
         // Listen to requested connections
-        this.peer.on('connection', conn => {
+        this.peer.on('connection', (conn: Peer.DataConnection) => {
             this.ngZone.run(() => {
                 console.log("peer - requested connection pending", conn);
 
@@ -155,6 +167,7 @@ export class PeerWrapper {
                     });
                 });
                 
+                // Would type this as any, but if they ever update their types, having any would override it
                 conn.on('error', (error) => {
                     this.ngZone.run(() => {
                         console.log("peer > conn - error");
@@ -169,7 +182,7 @@ export class PeerWrapper {
             });
         });
 
-        this.peer.on('call', conn => {
+        this.peer.on('call', (conn: Peer.MediaConnection) => {
             this.ngZone.run(() => {
                 console.log('peer > requestedCallConnection', conn);
 
@@ -190,7 +203,7 @@ export class PeerWrapper {
                 // By not providing a MediaStream in the answer args, we establish a one-wall call
                 conn.answer();
 
-                conn.on('stream', stream => {
+                conn.on('stream', (stream: MediaStream) => {
                     this.ngZone.run(() => {
                         if (this.options.isCaller) {
                             throw new Error("Unexpected isCaller and accepting stream from a peer");
@@ -216,6 +229,7 @@ export class PeerWrapper {
                     });
                 });
 
+                // Would type this as any, but if they ever update their types, having any would override it
                 conn.on('error', (error) => {
                     this.ngZone.run(() => {
                         console.log('peer - error');
@@ -245,7 +259,8 @@ export class PeerWrapper {
                 this.disconnectConnections();
             });
         });
-           
+        
+        // Would type this as any, but if they ever update their types, having any would override it
         this.peer.on('error', (error) => {
             this.ngZone.run(() => {
                 console.log('peer - error');
@@ -290,6 +305,7 @@ export class PeerWrapper {
             });
         });
         
+        // Would type this as any, but if they ever update their types, having any would override it
         this.sentConnection.on('error', (error) => {
             this.ngZone.run(() => {
                 console.warn("testing if connections when error are 'open'", conn.open);
@@ -403,6 +419,7 @@ export class PeerWrapper {
             });
         });
 
+        // Would type this as any, but if they ever update their types, having any would override it
         conn.on('error', (error) => {
             this.ngZone.run(() => {
                 console.log('peer > call - error');
@@ -464,12 +481,6 @@ export class PeerWrapper {
         this.peer.destroy();
     }
 }
-
-export type OnDataFunc = (
-    data: any,
-    peerID: string,
-) => void;
-
 
 @Injectable({
     providedIn: 'root'
