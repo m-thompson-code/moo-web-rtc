@@ -421,9 +421,15 @@ export class PeerWrapper {
 
         this.sentCallConnection = conn;
 
+        conn.on('open', () => {
+            this.ngZone.run(() => {
+                console.log("peer > sentCallConnection - open", conn.peer);
+            });
+        });
+
         conn.on('close', () => {
             this.ngZone.run(() => {
-                console.log("peer > call - close");
+                console.log("peer > sentCallConnection - close");
 
                 // TODO: properly handle if this call has closed
                 // Handle if we should retry or just let it go
@@ -439,7 +445,7 @@ export class PeerWrapper {
         // Would type this as any, but if they ever update their types, having any would override it
         conn.on('error', (error) => {
             this.ngZone.run(() => {
-                console.log('peer > call - error');
+                console.log('peer > sentCallConnection - error');
 
                 console.warn("testing if connections when error are 'open'", conn.open);
 
@@ -449,7 +455,7 @@ export class PeerWrapper {
             });
         });
 
-        console.log(this.peer, conn);
+        console.log('call made', this.peer, conn);
 
         return conn;
     }
