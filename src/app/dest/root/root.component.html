@@ -92,6 +92,21 @@
     Peer: {{ peer?.peerID || 'none' }}
 </div>
 
+
+<br>
+
+<div>
+    Them (Machine):
+</div>
+<div class="video-container">
+    <video #machineVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+    </video>
+</div>
+
+<div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
+    Click here to start
+</div>
+
 <br>
 
 <div *ngIf="machineData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid">
@@ -112,18 +127,4 @@
 
 <div *ngFor="let data of datas">
     {{ data.peerID }} {{ data.timestamp | date:'short' }}: {{ data.value }}
-</div>
-
-<br>
-
-<div>
-    Them (Machine):
-</div>
-<div class="video-container">
-    <video #machineVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
-    </video>
-</div>
-
-<div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
-    Click here to start
 </div>

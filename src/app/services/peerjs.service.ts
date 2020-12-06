@@ -95,7 +95,7 @@ export class PeerWrapper {
 
             // Call asap if we are the caller
             if (this.options.isCaller && this.mediaStream) {
-                this.call(this.otherPeerID, this.mediaStream);                
+                this.call(this.mediaStream, this.otherPeerID);                
             }
         }
     }
@@ -116,7 +116,7 @@ export class PeerWrapper {
                     return;
                 }
 
-                console.log("initalized", this.peerID);
+                console.log("initalized", peerID);
 
                 this.peerState = 'open';
 
@@ -131,6 +131,7 @@ export class PeerWrapper {
 
                 // Refuse other connections not from the expected otherPeerID
                 if (conn.peer !== this.otherPeerID) {
+                    console.warn("Unexpected connection was from a peer that was not a peer with otherPeerID");
                     conn.close();
                 }
 
@@ -145,13 +146,13 @@ export class PeerWrapper {
             
                 conn.on('open', () => {
                     this.ngZone.run(() => {
-                        console.log("peer > requested connection connected (we will reserve data from this peer now) - open");
+                        console.log("peer > requestedConnection open (we will reserve data from this peer now) - open", conn.peer);
 
                         this.peerState = 'connected';
                 
                         conn.on('data', (data: any) => {
                             this.ngZone.run(() => {
-                                console.log("peer > conn - data", data);
+                                console.log("peer > conn - data", data, conn.peer);
 
                                 this.options.onData(data, conn.peer);
                             });
@@ -161,7 +162,7 @@ export class PeerWrapper {
         
                 conn.on('close', () => {
                     this.ngZone.run(() => {
-                        console.log("peer > conn - close");
+                        console.log("peer > conn - close", conn.peer);
 
                         this.disconnectConnections();
                     });
@@ -170,9 +171,9 @@ export class PeerWrapper {
                 // Would type this as any, but if they ever update their types, having any would override it
                 conn.on('error', (error) => {
                     this.ngZone.run(() => {
-                        console.log("peer > conn - error");
+                        console.log("peer > conn - error", conn.peer);
 
-                        console.warn("testing if connections when error are 'open'", conn.open);
+                        console.warn("testing if connections when error are 'open'", conn.open, conn.peer);
 
                         // TODO: handle error better and perform retries
 
@@ -203,8 +204,16 @@ export class PeerWrapper {
                 // By not providing a MediaStream in the answer args, we establish a one-wall call
                 conn.answer();
 
+                conn.on('open', () => {
+                    this.ngZone.run(() => {
+                        console.log("peer > requestedCallConnection - open", conn.peer);
+                    });
+                });
+
                 conn.on('stream', (stream: MediaStream) => {
                     this.ngZone.run(() => {
+                        console.log("peer > requestedCallConnection - stream", conn.peer);
+
                         if (this.options.isCaller) {
                             throw new Error("Unexpected isCaller and accepting stream from a peer");
                         }
@@ -219,7 +228,7 @@ export class PeerWrapper {
 
                 conn.on('close', () => {
                     this.ngZone.run(() => {
-                        console.log("peer > call - close");
+                        console.log("peer > requestedCallConnection - close", conn.peer);
         
                         this.disconnectConnections();
 
@@ -232,9 +241,9 @@ export class PeerWrapper {
                 // Would type this as any, but if they ever update their types, having any would override it
                 conn.on('error', (error) => {
                     this.ngZone.run(() => {
-                        console.log('peer - error');
+                        console.log('peer > requestedCallConnection - error', conn.peer);
 
-                        console.warn("testing if connections when error are 'open'", conn.open);
+                        console.warn("testing if connections when error are 'open'", conn.open, conn.peer);
 
                         // TODO: handle error better and perform retries
 
@@ -286,6 +295,8 @@ export class PeerWrapper {
 
         // TODO: check if destroyed
 
+        console.log("data connection requested...", this.otherPeerID);
+
         // Close any other sentConnections that may exist
         if (this.sentConnection) {
             this.sentConnection.close();
@@ -297,7 +308,13 @@ export class PeerWrapper {
 
         this.sentConnection = conn;
 
-        this.sentConnection.on('close', () => {
+        conn.on('open', () => {
+            this.ngZone.run(() => {
+                console.log("peer > sentConnection - open", conn.peer);
+            });
+        });
+
+        conn.on('close', () => {
             this.ngZone.run(() => {
                 console.log("peer > sentConnection - close");
 
@@ -306,11 +323,11 @@ export class PeerWrapper {
         });
         
         // Would type this as any, but if they ever update their types, having any would override it
-        this.sentConnection.on('error', (error) => {
+        conn.on('error', (error) => {
             this.ngZone.run(() => {
-                console.warn("testing if connections when error are 'open'", conn.open);
+                console.warn("testing if connections when error are 'open'", conn.open, conn.peer);
 
-                console.log("peer > sentConnection - error");
+                console.log("peer > sentConnection - error", conn.peer);
 
                 // TODO: handle error better and perform retries
 
@@ -373,7 +390,7 @@ export class PeerWrapper {
         this.options.onData(data, this.peer.id);
     }
 
-    public call(otherPeerID?: string, mediaStream?: MediaStream): Peer.MediaConnection {
+    public call(mediaStream?: MediaStream, otherPeerID?: string): Peer.MediaConnection {
         this.otherPeerID = otherPeerID || this.otherPeerID;
         this.mediaStream = mediaStream || this.mediaStream;
 

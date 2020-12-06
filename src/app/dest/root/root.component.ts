@@ -168,7 +168,7 @@ export class RootComponent implements OnInit, OnDestroy {
             onData: (data: any, peerID: string) => {
                 this.datas.push({
                     peerID: peerID,
-                    value: data,
+                    value: data.value,
                     timestamp: Date.now(),
                 });
             },

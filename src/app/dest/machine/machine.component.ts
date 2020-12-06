@@ -71,7 +71,7 @@ export class MachineComponent implements OnInit, OnDestroy {
                 onData: (data: any, peerID: string) => {
                     this.datas.push({
                         peerID: peerID,
-                        value: data,
+                        value: data.value,
                         timestamp: Date.now(),
                     });
                 },
@@ -81,6 +81,10 @@ export class MachineComponent implements OnInit, OnDestroy {
 
             this.myStream = mediaStream;
             this.videoService.bindVideoStream(this.video.nativeElement, mediaStream);
+
+            if (this.currentPrivatePlayersData.value?.peerID) {
+                this.connect();
+            }
         }, error => {
             this.ngZone.run(() => {
                 console.error(error);
@@ -94,7 +98,9 @@ export class MachineComponent implements OnInit, OnDestroy {
                 isPending: false,
             };
 
-            this.connect();
+            if (this.peer) {
+                this.connect();
+            }
 
             if (this.myStream && this.currentPrivatePlayersData.value) {
                 this.call();            
@@ -133,18 +139,21 @@ export class MachineComponent implements OnInit, OnDestroy {
 
     public connect(): void {
         if (!this.currentPrivatePlayersData.value?.peerID) {
-            console.warn("Unexpected missing player peerID");
-            return;
+            throw Error("Unexpected missing player peerID");
         }
 
-        this.peer?.connect(this.currentPrivatePlayersData.value.peerID);
+        if (!this.peer) {
+            throw Error("Unexpected missing peer");
+        }
+
+        this.peer.connect(this.currentPrivatePlayersData.value.peerID);
     }
 
     public call(): void {
         if (this.myStream && this.currentPrivatePlayersData.value) {
-            this.peer?.call(this.currentPrivatePlayersData.value.peerID, this.myStream);                
+            this.peer?.call(this.myStream, this.currentPrivatePlayersData.value.peerID);                
         } else {
-            console.warn("Missing stream and/or otherPeerID");
+            throw Error("Missing stream and/or otherPeerID");
         }
     }
 
