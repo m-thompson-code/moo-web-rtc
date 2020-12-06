@@ -83,7 +83,7 @@
 <br>
 
 <div>
-    Peer: {{ peerjsService.peer?.id || 'none' }}
+    Peer: {{ peer?.peerID || 'none' }}
 </div>
 
 <br>
@@ -92,22 +92,16 @@
     <button (click)="connect()">Connect to machine</button>
 </div>
 
-<div *ngIf="otherID && peerjsService.conn">
-    <a (click)="peerjsService.disconnect()">Disconnect</a>
+<div *ngIf="machineData.value?.peerID && peer?.sentConnection">
+    <a (click)="peer?.disconnectConnections()">Disconnect</a>
 </div>
 
 <br>
 
-<div *ngIf="peerjsService.conn">
+<div *ngIf="peer?.sentConnection">
     <form [formGroup]="formGroup" (ngSubmit)="submit()">
         <input formControlName="send"><button type="submit">Send</button>
     </form>
-<!-- 
-    <br>
-
-    <div>
-        <button (click)="call()">Call</button>
-    </div> -->
 </div>
 
 <div *ngFor="let data of datas">
@@ -116,19 +110,11 @@
 
 <br>
 
-<!-- <div>
-    You:
-</div>
-<div class="video-container">
-    <video #myVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
-    </video>
-</div> -->
-
 <div>
     Them (Machine):
 </div>
 <div class="video-container">
-    <video #theirVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+    <video #machineVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
     </video>
 </div>
 

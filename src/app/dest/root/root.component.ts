@@ -6,7 +6,7 @@ import firebase from 'firebase/app';
 
 import { AuthService } from '@app/services/auth.service';
 import { FirebaseService, MachineData, PrivatePlayerData, PublicPlayerData } from '@app/services/firebase.service';
-import { PeerjsService } from '@app/services/peerjs.service';
+import { PeerjsService, PeerWrapper } from '@app/services/peerjs.service';
 import { VideoService } from '@app/services/video.service';
 
 import * as faker from 'faker';
@@ -17,22 +17,13 @@ import * as faker from 'faker';
     styleUrls: ['./root.component.scss']
 })
 export class RootComponent implements OnInit, OnDestroy {
-    @ViewChild('myVideo', {static: true}) private myVideo!: ElementRef<HTMLVideoElement>;
-    @ViewChild('theirVideo', {static: true}) private theirVideo!: ElementRef<HTMLVideoElement>;
+    @ViewChild('machineVideo', {static: true}) private machineVideo!: ElementRef<HTMLVideoElement>;
 
-    
     public formGroup!: FormGroup;
     public setPlayerFormGroup!: FormGroup;
 
-    // public peer?: Peer;
-    // public conn?:Peer.DataConnection;
-    // public peerConn?: Peer.DataConnection;
-    // public callConn?: Peer.MediaConnection;
-
-    public myID: string = "";
-    public otherID: string = "";
-
-    // public debugLevel: 0 | 1 | 2 | 3 = 0;
+    public peerID: string = "";
+    public peer?: PeerWrapper;
 
     public datas: {
         peerID: string;
@@ -40,9 +31,7 @@ export class RootComponent implements OnInit, OnDestroy {
         timestamp: number;
     }[] = [];
 
-    public myStream?: MediaStream;
-
-    public theirStream?: MediaStream;
+    public machineStream?: MediaStream;
 
     private _sub?: Subscription;
     private _sub2?: Subscription;
@@ -69,7 +58,7 @@ export class RootComponent implements OnInit, OnDestroy {
     } = { value: undefined, isPending: true };
 
     constructor(private fb: FormBuilder, private firebaseService: FirebaseService, 
-    public peerjsService: PeerjsService, public videoService: VideoService, private authService: AuthService) {
+    private peerjsService: PeerjsService, public videoService: VideoService, private authService: AuthService) {
         
     }
 
@@ -101,16 +90,6 @@ export class RootComponent implements OnInit, OnDestroy {
                 disabled: false,
             }),
         });
-
-        // const f = this.firebaseService.init();
-
-        // console.log(f);
-
-        // const oldID: any = sessionStorage.getItem('my-id');
-
-        // if (oldID) {
-        //     this.getPeer(oldID);
-        // }
     }
 
     public _init(): void {
@@ -132,6 +111,13 @@ export class RootComponent implements OnInit, OnDestroy {
         this._sub.add(this.firebaseService.getCurrentPublicPlayer().subscribe(publicPlayer => {
             this.currentPublicPlayerData = {
                 value: publicPlayer,
+                isPending: false,
+            };
+        }));
+
+        this._sub.add(this.firebaseService.getMachineData().subscribe(machine => {
+            this.machineData = {
+                value: machine,
                 isPending: false,
             };
         }));
@@ -161,23 +147,24 @@ export class RootComponent implements OnInit, OnDestroy {
                 };
 
                 if (this.myPrivatePlayerData.value?.peerID) {
-                    this.getPeer(this.myPrivatePlayerData.value?.peerID);
+                    this.initalizePeer(this.myPrivatePlayerData.value?.peerID);
                 } else {
-                    this.peerjsService.destroyPeer();
+                    this.peer?.destroy();
                 }
             });
         }
     }
     
-    public getPeer(peerID: string): void {
-        const onOpen = () => {
-            if (this.machineData.value?.peerID) {
-                this.peerjsService.connect(this.machineData.value.peerID);
-            }
-        };
+    public initalizePeer(peerID: string): void {
+        this.peerID = peerID;
 
-        this.peerjsService.getPeer(peerID, {
-            onOpen: onOpen,
+        if (this.peer) {
+            this.peer.destroy();
+        }
+
+        this.peer = this.peerjsService.getPeer({
+            peerID: peerID,
+            otherPeerID: this.machineData.value?.peerID,
             onData: (data: any, peerID: string) => {
                 this.datas.push({
                     peerID: peerID,
@@ -187,9 +174,10 @@ export class RootComponent implements OnInit, OnDestroy {
             },
             onCall: (conn, stream) => {
                 console.log(conn, stream);
+                this.machineStream = stream;
                 
-                this.videoService.pushPendingVideo(this.theirVideo.nativeElement);
-                this.videoService.bindVideoStream(this.theirVideo.nativeElement, stream);
+                this.videoService.pushPendingVideo(this.machineVideo.nativeElement);
+                this.videoService.bindVideoStream(this.machineVideo.nativeElement, stream);
             }
         });
     }
@@ -205,13 +193,7 @@ export class RootComponent implements OnInit, OnDestroy {
 
         sendFormControl.patchValue('');
 
-        this.peerjsService.send(value, (data: any, peerID: string) => {
-            this.datas.push({
-                peerID: peerID,
-                value: data,
-                timestamp: Date.now(),
-            });
-        });
+        this.peer?.send(value);
     }
 
     public setUser(): Promise<void> {
@@ -262,13 +244,12 @@ export class RootComponent implements OnInit, OnDestroy {
     }
 
     public connect(): void {
-        console.error("stub");
         if (!this.machineData.value?.peerID) {
             console.warn("Unexpected missing machine peerID");
             return;
         }
 
-        this.peerjsService.connect(this.machineData.value.peerID);
+        this.peer?.connect(this.machineData.value.peerID);
     }
 
     public ngOnDestroy(): void {

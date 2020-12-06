@@ -82,10 +82,11 @@
 </div>
 
 <div *ngIf="currentPrivatePlayersData.value">
-    <button (click)="connect()">Connect to current player</button>
+    <button (click)="connect()">Connect current player</button>
+    <button (click)="call()">Call current player</button>
 </div>
 
-<div *ngIf="peerjsService.conn">
+<div *ngIf="peer?.sentConnection">
     <form [formGroup]="formGroup" (ngSubmit)="submit()">
         <input formControlName="send"><button type="submit">Send</button>
     </form>

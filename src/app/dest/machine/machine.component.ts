@@ -2,7 +2,7 @@ import { Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild } from '@an
 import { Subscription } from 'rxjs';
 
 import { FirebaseService, MachineData, PrivatePlayerData } from '@app/services/firebase.service';
-import { PeerjsService } from '@app/services/peerjs.service';
+import { PeerjsService, PeerWrapper } from '@app/services/peerjs.service';
 import { VideoService } from '@app/services/video.service';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 
@@ -18,7 +18,8 @@ export class MachineComponent implements OnInit, OnDestroy {
 
     private _sub?: Subscription;
 
-    public peerID: string = "";
+    public peerID!: string;
+    public peer?: PeerWrapper;
 
     public currentPrivatePlayersData: {
         value: PrivatePlayerData | undefined;
@@ -38,7 +39,7 @@ export class MachineComponent implements OnInit, OnDestroy {
         timestamp: number;
     }[] = [];
 
-    constructor(private fb: FormBuilder, private ngZone: NgZone, public peerjsService: PeerjsService, 
+    constructor(private fb: FormBuilder, private ngZone: NgZone, private peerjsService: PeerjsService, 
         private firebaseService: FirebaseService, public videoService: VideoService) { }
 
     public ngOnInit(): void {
@@ -46,6 +47,10 @@ export class MachineComponent implements OnInit, OnDestroy {
     }
 
     private _init(): void {
+        this.peerID = localStorage.getItem('machine-peer-id') || this.peerjsService.getRandomPeerID();
+
+        localStorage.setItem('machine-peer-id', this.peerID);
+
         this.formGroup = this.fb.group({
             'send': new FormControl({
                 value: 'hello world',
@@ -53,37 +58,33 @@ export class MachineComponent implements OnInit, OnDestroy {
             }),
         });
 
-        this.peerID = this.peerjsService.getRandomPeerID();
-
-        const onOpen = () => {
-            this.connect();
-        };
-
-        this.peerjsService.getPeer(this.peerID, {
-            onOpen: onOpen,
-            onData: (data: any, peerID: string) => {
-                this.datas.push({
-                    peerID: peerID,
-                    value: data,
-                    timestamp: Date.now(),
-                });
-            }
-        });
-
-        // TODO: prevent calling unless peer is the 'streamer' peer
         navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
         
         // TODO: Bring back audio (just for testing)
-        navigator.getUserMedia({video: true, audio: false}, stream => {
-            this.myStream = stream;
-            this.videoService.bindVideoStream(this.video.nativeElement, stream);
-
-            if (this.myStream && this.currentPrivatePlayersData.value) {
-                this.peerjsService.call(this.currentPrivatePlayersData.value.peerID, this.myStream);                
+        navigator.getUserMedia({video: true, audio: false}, mediaStream => {
+            if (this.peer) {
+                this.peer.destroy();
             }
+
+            this.peer = this.peerjsService.getPeer({
+                peerID: this.peerID,
+                onData: (data: any, peerID: string) => {
+                    this.datas.push({
+                        peerID: peerID,
+                        value: data,
+                        timestamp: Date.now(),
+                    });
+                },
+                mediaStream: mediaStream,
+                isCaller: true,
+            });
+
+            this.myStream = mediaStream;
+            this.videoService.bindVideoStream(this.video.nativeElement, mediaStream);
         }, error => {
             this.ngZone.run(() => {
                 console.error(error);
+                debugger;
             });
         });
 
@@ -93,8 +94,10 @@ export class MachineComponent implements OnInit, OnDestroy {
                 isPending: false,
             };
 
+            this.connect();
+
             if (this.myStream && this.currentPrivatePlayersData.value) {
-                this.peerjsService.call(this.currentPrivatePlayersData.value.peerID, this.myStream);                
+                this.call();            
             }
         });
 
@@ -125,13 +128,7 @@ export class MachineComponent implements OnInit, OnDestroy {
 
         sendFormControl.patchValue('');
 
-        this.peerjsService.send(value, (data: any, peerID: string) => {
-            this.datas.push({
-                peerID: peerID,
-                value: data,
-                timestamp: Date.now(),
-            });
-        });
+        this.peer?.send(value);
     }
 
     public connect(): void {
@@ -140,14 +137,19 @@ export class MachineComponent implements OnInit, OnDestroy {
             return;
         }
 
-        this.peerjsService.connect(this.currentPrivatePlayersData.value.peerID);
+        this.peer?.connect(this.currentPrivatePlayersData.value.peerID);
+    }
 
+    public call(): void {
         if (this.myStream && this.currentPrivatePlayersData.value) {
-            this.peerjsService.call(this.currentPrivatePlayersData.value.peerID, this.myStream);                
+            this.peer?.call(this.currentPrivatePlayersData.value.peerID, this.myStream);                
+        } else {
+            console.warn("Missing stream and/or otherPeerID");
         }
     }
 
     public ngOnDestroy(): void {
+        this.peer?.destroy();
         this._sub?.unsubscribe();
     }
 }
