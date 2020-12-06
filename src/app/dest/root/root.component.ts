@@ -174,11 +174,21 @@ export class RootComponent implements OnInit, OnDestroy {
             },
             onCall: (conn, stream) => {
                 console.log(conn, stream);
+
+                if (this.machineStream) {
+                    this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
+                }
+
                 this.machineStream = stream;
                 
                 this.videoService.pushPendingVideo(this.machineVideo.nativeElement);
                 this.videoService.bindVideoStream(this.machineVideo.nativeElement, stream);
-            }
+            },
+            onCallConnectionClosed: () => {
+                if (this.machineStream) {
+                    this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
+                }
+            },
         });
     }
 

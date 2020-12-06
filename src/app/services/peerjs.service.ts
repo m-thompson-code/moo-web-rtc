@@ -4,39 +4,39 @@ import firebase from 'firebase/app';
 
 import Peer from 'peerjs';
 import util from 'peerjs';
-import { Observable, Subscription } from 'rxjs';
-import { FirebaseService, MachineData } from './firebase.service';
+
+import { FirebaseService } from './firebase.service';
 
 const REMOTE_SERVER_HOST = 'moo-web-rtc-server.uc.r.appspot.com';
 
 interface _PeerWrapperInit {
     peerID: string;
     otherPeerID?: string;
-    onOpen?: () => void;
+    onPeerInitalized?: () => void;
     onData: OnDataFunc;
     onCall?: (conn: Peer.MediaConnection, stream: MediaStream) => void;
+    onCallConnectionClosed?: () => void;
     server?: 'local' | 'remote';
     debugLevel?: DebugLevel;
 }
 
-interface CantCall extends _PeerWrapperInit {
+interface IsNotCaller extends _PeerWrapperInit {
     mediaStream?: never;
     isCaller?: false;
     onCall: (conn: Peer.MediaConnection, stream: MediaStream) => void;
+    onCallConnectionClosed: () => void;
 }
 
-interface CanCall extends _PeerWrapperInit {
+interface IsCaller extends _PeerWrapperInit {
     mediaStream?: MediaStream;
     isCaller: true;
+    onCall?: never;
+    onCallConnectionClosed?: never;
 }
 
 export type DebugLevel = 0 | 1 | 2 | 3;
 
-export type GetPeerOptions = CantCall | CanCall;
-// export type GetPeerOptions = (CantCall | CanCall) & {
-//     mediaStream?: MediaStream;
-//     isCaller?: boolean;
-// };
+export type GetPeerOptions = IsNotCaller | IsCaller;
 
 /**
  * Wrapper for the `Peer` object from `peerjs` library. 
@@ -51,11 +51,12 @@ export type GetPeerOptions = CantCall | CanCall;
 export class PeerWrapper {
     public peer: Peer;
     public sentConnection?:Peer.DataConnection;
-    public peerConn?: Peer.DataConnection;
-    public callConn?: Peer.MediaConnection;
+    public requestedConnection?: Peer.DataConnection;
+    public sentCallConnection?: Peer.MediaConnection;
+    public requestedCallConnection?: Peer.MediaConnection;
 
     public state: 'pending' | 'initalized' | 'destroyed' = 'pending';
-    public peerState: 'pending' | 'opening' | 'open' | 'connecting' | 'connected' | 'off' = 'pending';
+    public peerState: 'pending' | 'initalizing' | 'open' | 'connecting' | 'connected' | 'off' = 'pending';
 
     public peerID: string;
     public otherPeerID?: string;
@@ -71,7 +72,7 @@ export class PeerWrapper {
         this.peer = new Peer(this.peerID, {
             debug: options.debugLevel || 0,
             host: options.server === 'local' ? 'localhost' : REMOTE_SERVER_HOST,
-            port: 443,
+            port: 443,// The default port used by peerJS and seems to be the right port for our GAE hosting for the peerJS server
             secure: options.server === 'local' ? false : true,
             path: '/'
         });
@@ -79,10 +80,15 @@ export class PeerWrapper {
         this._initalizePeer();
     }
 
-    private _defaultOnOpen(): void {
+    /**
+     * A default onPeerInitalized function that tries to connect asap and call asap if caller
+     */
+    private _defaultOnPeerOpen(): void {
+        // Try to connect asap if we know the other peerID
         if (this.otherPeerID) {
             this.connect(this.otherPeerID);
 
+            // Call asap if we are the caller
             if (this.options.isCaller && this.mediaStream) {
                 this.call(this.otherPeerID, this.mediaStream);                
             }
@@ -90,9 +96,11 @@ export class PeerWrapper {
     }
 
     public _initalizePeer() {
-        console.log("opening...", this.peerID);
+        console.log("initalizing...", this.peerID);
 
-        this.peerState = 'opening';
+        // Listen to the peer opening (Initializing)
+        // This is when using Peer.DataConnection/Peer.MediaConnection are ready to be used
+        this.peerState = 'initalizing';
 
         this.peer.on('open', (peerID) => {
             this.ngZone.run(() => {
@@ -100,21 +108,32 @@ export class PeerWrapper {
 
                 this.peerState = 'open';
 
-                this.options.onOpen && this.options.onOpen() || this._defaultOnOpen();
+                this.options.onPeerInitalized && this.options.onPeerInitalized() || this._defaultOnPeerOpen();
             });
         });
         
-        this.peer.on('connection', (conn) => {
+        // Listen to requested connections
+        this.peer.on('connection', conn => {
             this.ngZone.run(() => {
-                console.log("peer - connection", conn);
+                console.log("peer - requested connection pending", conn);
+
+                // Refuse other connections not from the expected otherPeerID
+                if (conn.peer !== this.otherPeerID) {
+                    conn.close();
+                }
 
                 this.peerState = 'connecting';
 
-                this.peerConn = conn;
+                if (this.requestedConnection) {
+                    this.requestedConnection.close();
+                    this.requestedConnection = undefined;
+                }
+
+                this.requestedConnection = conn;
             
                 conn.on('open', () => {
                     this.ngZone.run(() => {
-                        console.log("peer > conn - open");
+                        console.log("peer > requested connection connected (we will reserve data from this peer now) - open");
 
                         this.peerState = 'connected';
                 
@@ -122,10 +141,7 @@ export class PeerWrapper {
                             this.ngZone.run(() => {
                                 console.log("peer > conn - data", data);
 
-                                this.options.onData(
-                                    data,
-                                    conn.peer,
-                                );
+                                this.options.onData(data, conn.peer);
                             });
                         });
                     });
@@ -135,12 +151,6 @@ export class PeerWrapper {
                     this.ngZone.run(() => {
                         console.log("peer > conn - close");
 
-                        if (this.peer) {
-                            this.peerState = 'open';
-                        } else {
-                            this.peerState = 'off';
-                        }
-
                         this.disconnectConnections();
                     });
                 });
@@ -148,6 +158,10 @@ export class PeerWrapper {
                 conn.on('error', (error) => {
                     this.ngZone.run(() => {
                         console.log("peer > conn - error");
+
+                        console.warn("testing if connections when error are 'open'", conn.open);
+
+                        // TODO: handle error better and perform retries
 
                         this._handleError(error);
                     });
@@ -157,31 +171,60 @@ export class PeerWrapper {
 
         this.peer.on('call', conn => {
             this.ngZone.run(() => {
-                console.log('peer - call', conn);
+                console.log('peer > requestedCallConnection', conn);
 
+                // Reject calls if you are the caller
+                // Also avoid calls from any peer that doesn't have the otherPeerID
                 if (this.options.isCaller || conn.peer !== this.otherPeerID) {
                     conn.close();
                     return;
                 }
 
-                if (this.callConn) {
-                    this.callConn.close();
-                    this.callConn = undefined;
+                if (this.requestedCallConnection) {
+                    this.requestedCallConnection.close();
+                    this.requestedCallConnection = undefined;
                 }
 
-                this.callConn = conn;
+                this.requestedCallConnection = conn;
 
-                conn.answer();// By not providing a MediaStream in the answer args, we establish a one-wall call
+                // By not providing a MediaStream in the answer args, we establish a one-wall call
+                conn.answer();
 
                 conn.on('stream', stream => {
                     this.ngZone.run(() => {
-                        console.log(stream);
+                        if (this.options.isCaller) {
+                            throw new Error("Unexpected isCaller and accepting stream from a peer");
+                        }
 
                         if (!this.options.onCall) {
                             throw new Error("Unexpected missing onCall");
                         }
 
                         this.options.onCall(conn, stream);
+                    });
+                });
+
+                conn.on('close', () => {
+                    this.ngZone.run(() => {
+                        console.log("peer > call - close");
+        
+                        this.disconnectConnections();
+
+                        // TODO: handle error better and perform retries
+
+                        this.options.onCallConnectionClosed?.();
+                    });
+                });
+
+                conn.on('error', (error) => {
+                    this.ngZone.run(() => {
+                        console.log('peer - error');
+
+                        console.warn("testing if connections when error are 'open'", conn.open);
+
+                        // TODO: handle error better and perform retries
+
+                        this._handleError(error);
                     });
                 });
             });
@@ -206,6 +249,7 @@ export class PeerWrapper {
         this.peer.on('error', (error) => {
             this.ngZone.run(() => {
                 console.log('peer - error');
+
                 this._handleError(error);
             });
         });
@@ -213,7 +257,12 @@ export class PeerWrapper {
         return this.peer;
     }
 
-    public connect(otherPeerID?: string): Peer.PeerConnectOption {
+    /**
+     * Connect to other peer. A nice note is that the Peer.DataConnection returned 
+     * from this method doesn't have an on data listener. The propery spot is the 
+     * Peer.DataConnection found on the requestedConnection
+     */
+    public connect(otherPeerID?: string): Peer.DataConnection {
         this.otherPeerID = otherPeerID || this.otherPeerID;
 
         if (!this.otherPeerID) {
@@ -222,13 +271,20 @@ export class PeerWrapper {
 
         // TODO: check if destroyed
 
-        this.sentConnection = this.peer.connect(this.otherPeerID, {
+        // Close any other sentConnections that may exist
+        if (this.sentConnection) {
+            this.sentConnection.close();
+        }
+
+        const conn = this.peer.connect(this.otherPeerID, {
             serialization: 'json'// Required for Safari support: https://github.com/peers/peerjs#safari
         });
 
+        this.sentConnection = conn;
+
         this.sentConnection.on('close', () => {
             this.ngZone.run(() => {
-                console.log("connect() conn - close");
+                console.log("peer > sentConnection - close");
 
                 this.disconnectConnections();
             });
@@ -236,52 +292,72 @@ export class PeerWrapper {
         
         this.sentConnection.on('error', (error) => {
             this.ngZone.run(() => {
-                console.log("connect() conn - error");
+                console.warn("testing if connections when error are 'open'", conn.open);
+
+                console.log("peer > sentConnection - error");
+
+                // TODO: handle error better and perform retries
+
                 this._handleError(error);
             });
         });
 
-        return this.sentConnection;
+        return conn;
     }
     
-    public disconnectConnections() {
+    /**
+     * Used to disconnect all connections. We use this whenever any connection has been closed or if peer is destroyed
+     */
+    public disconnectConnections(): void {
         // TODO: add onDisconnect to clean up MediaStream stuff
-        console.log("disconnect", this.sentConnection, this.peerConn, this.callConn);
+        console.log("disconnect", this.sentConnection, this.requestedConnection, this.requestedCallConnection);
 
         if (this.sentConnection) {
             this.sentConnection.close();
             this.sentConnection = undefined;
         }
 
-        if (this.peerConn) {
-            this.peerConn.close();
-            this.peerConn = undefined;
+        if (this.requestedConnection) {
+            this.requestedConnection.close();
+            this.requestedConnection = undefined;
+        }
+        
+        if (this.sentCallConnection) {
+            this.sentCallConnection.close();
+            this.sentCallConnection = undefined;
         }
 
-        if (this.callConn) {
-            this.callConn.close();
-            this.callConn = undefined;
+        if (this.requestedCallConnection) {
+            this.requestedCallConnection.close();
+            this.requestedCallConnection = undefined;
+        }
+
+        if (this.peer && this.peerState !== 'off') {
+            if (this.peerState === 'connecting') {
+                console.warn("Unexpected connecting is interupted (peerState is 'connecting')");
+            }
+            this.peerState = 'open';
+        } else {
+            this.peerState = 'off';
         }
     }
 
     public send(value: any): void {
         if (!this.sentConnection) {
-            return;
+            throw new Error("Unexpected missing sentConnection. This is required to send data to the other peer");
         }
 
         const data = {
             value: value,
+            sentTimestamp: Date.now(),
         };
 
         this.sentConnection.send(data);
 
-        this.options.onData(
-            data,
-            this.peer.id,
-        );
+        this.options.onData(data, this.peer.id);
     }
 
-    public call(otherPeerID?: string, mediaStream?: MediaStream): void {
+    public call(otherPeerID?: string, mediaStream?: MediaStream): Peer.MediaConnection {
         this.otherPeerID = otherPeerID || this.otherPeerID;
         this.mediaStream = mediaStream || this.mediaStream;
 
@@ -293,41 +369,88 @@ export class PeerWrapper {
             throw new Error("Unexpected missing mediaStream");
         }
 
-        const call = this.peer?.call(this.otherPeerID, this.mediaStream);
-        console.log(this.peer, call);
+        const conn = this.peer?.call(this.otherPeerID, this.mediaStream);
+
+        this.sentCallConnection = conn;
+
+        // Reject calling if peer is not the caller
+        // Also avoid calls from any peer that doesn't have the otherPeerID
+        if (!this.options.isCaller || conn.peer !== this.otherPeerID) {
+            conn.close();
+
+            throw new Error("Unexpected call from a peer that is not the caller");
+        }
+
+        if (this.sentCallConnection) {
+            this.sentCallConnection.close();
+            this.sentCallConnection = undefined;
+        }
+
+        this.sentCallConnection = conn;
+
+        conn.on('close', () => {
+            this.ngZone.run(() => {
+                console.log("peer > call - close");
+
+                // TODO: properly handle if this call has closed
+                // Handle if we should retry or just let it go
+
+                // this.disconnectConnections();
+
+                // // TODO: handle error better and perform retries
+
+                // this.options.onCallConnectionClosed?.();
+            });
+        });
+
+        conn.on('error', (error) => {
+            this.ngZone.run(() => {
+                console.log('peer > call - error');
+
+                console.warn("testing if connections when error are 'open'", conn.open);
+
+                // TODO: handle error better and perform retries
+
+                this._handleError(error);
+            });
+        });
+
+        console.log(this.peer, conn);
+
+        return conn;
     }
 
     private _handleError(error: any): void {
         if (error.type) {
             if (error.type === 'browser-incompatible') {
-                // TODO: handle browser issues
+                // TODO: this error properly
                 console.error('browser-incompatible', error);
             } else if (error.type === 'disconnect') {
-                // TODO: handle browser issues
+                // TODO: this error properly
                 console.error('disconnect', error);
             } else if (error.type === 'disconnect') {
-                // TODO: handle browser issues
+                // TODO: this error properly
                 console.error('invalid-id', error);
             } else if (error.type === 'invalid-id') {
-                // TODO: handle browser issues
+                // TODO: this error properly
                 console.error('network', error);
             } else if (error.type === 'network') {
-                // TODO: handle browser issues
+                // TODO: this error properly
                 console.error('peer-unavailable', error);
             } else if (error.type === 'peer-unavailable') {
-                // TODO: handle browser issues
+                // TODO: this error properly
                 console.error('ssl-unavailable', error);
             } else if (error.type === 'ssl-unavailable') {
-                // TODO: handle browser issues
+                // TODO: this error properly
                 console.error('server-error', error);
             } else if (error.type === 'server-error') {
-                // TODO: handle browser issues
+                // TODO: this error properly
                 console.error('socket-error', error);
             } else if (error.type === 'socket-error') {
-                // TODO: handle browser issues
+                // TODO: this error properly
                 console.error('socket-closed', error);
             } else if (error.type === 'socket-closed') {
-                // TODO: handle browser issues
+                // TODO: this error properly
                 console.error('unavailable-id', error);
             }
         }
@@ -352,20 +475,8 @@ export type OnDataFunc = (
     providedIn: 'root'
 })
 export class PeerjsService {
-    // public peer?: Peer;
-    // public conn?:Peer.DataConnection;
-    // public peerConn?: Peer.DataConnection;
-    // public callConn?: Peer.MediaConnection;
-
-    // public peerID: string = "";
-
-    // public debugLevel: DebugLevel = 0;
-
-    // public server: 'remote' | 'local' = 'local';
-
-    // public peerState: 'off' | 'opening' | 'open' | 'connecting' | 'connected' = 'off';
-
     constructor(private ngZone: NgZone, private firebaseService: FirebaseService) {
+        // TODO: use util
         console.log(util);
     }
 
