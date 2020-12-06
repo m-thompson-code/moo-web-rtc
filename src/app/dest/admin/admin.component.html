@@ -12,7 +12,7 @@
     <br>
 
     <div *ngFor="let privatePlayer of privatePlayersData.value; let i = index">
-        <div>{{ i + 1 }} UID: {{ privatePlayer.uid }} - Username: {{ privatePlayer.username }} - {{ privatePlayer.createdAtDate | date:'short' }} - peerID: {{ privatePlayer.peerID }}
+        <div>{{ i + 1 }} peerID: {{ privatePlayer.peerID }} - UID: {{ privatePlayer.uid }} - Username: {{ privatePlayer.username }} - {{ privatePlayer.createdAtDate | date:'short' }}
         <br><button (click)="setPlayer(privatePlayer)">SET AS CURRENT</button><button (click)="deactivatePlayer(privatePlayer.uid)">KICK</button></div>
     </div>
 </div>
