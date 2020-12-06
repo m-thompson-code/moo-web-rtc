@@ -34,11 +34,22 @@
         Current Private Player: 
     </div>
 
+    <br>
+
     <div *ngIf="!currentPrivatePlayersData.value">
         (none)
     </div>
 
     <div *ngIf="currentPrivatePlayersData.value">
+        
+        <br>
+
+        <div>
+            peerID: {{ currentPrivatePlayersData.value.peerID }}
+        </div>
+
+        <br>
+
         <div>
             UID: {{ currentPrivatePlayersData.value.uid }}
         </div>
@@ -55,10 +66,7 @@
         <div>
             Updated At: {{ currentPrivatePlayersData.value.updatedAtDate | date:'short' }}
         </div>
-    
-        <div>
-            peerID: {{ currentPrivatePlayersData.value.peerID }}
-        </div>
+
         <div>
             phoneNumber: {{ currentPrivatePlayersData.value.phoneNumber }}
         </div>
