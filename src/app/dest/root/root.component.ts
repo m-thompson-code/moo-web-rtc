@@ -6,7 +6,7 @@ import firebase from 'firebase/app';
 
 import { AuthService } from '@app/services/auth.service';
 import { FirebaseService, MachineData, PrivatePlayerData, PublicPlayerData } from '@app/services/firebase.service';
-import { PeerjsService, PeerWrapper } from '@app/services/peerjs.service';
+import { PeerjsService, PeerWrapper, ReceiveData } from '@app/services/peerjs.service';
 import { VideoService } from '@app/services/video.service';
 
 import * as faker from 'faker';
@@ -25,11 +25,7 @@ export class RootComponent implements OnInit, OnDestroy {
     public peerID: string = "";
     public peer?: PeerWrapper;
 
-    public datas: {
-        peerID: string;
-        value: string;
-        timestamp: number;
-    }[] = [];
+    public datas: ReceiveData[] = [];
 
     public machineStream?: MediaStream;
 
@@ -56,6 +52,11 @@ export class RootComponent implements OnInit, OnDestroy {
         value: MachineData | undefined;
         isPending: boolean;
     } = { value: undefined, isPending: true };
+
+    public errors: {
+        errorType?: string;
+        errorMessage?: string;
+    }[] = [];
 
     constructor(private fb: FormBuilder, private firebaseService: FirebaseService, 
     private peerjsService: PeerjsService, public videoService: VideoService, private authService: AuthService) {
@@ -177,12 +178,8 @@ export class RootComponent implements OnInit, OnDestroy {
         this.peer = this.peerjsService.getPeer({
             peerID: peerID,
             otherPeerID: this.machineData.value?.peerID,
-            onData: (data: any, peerID: string) => {
-                this.datas.push({
-                    peerID: peerID,
-                    value: data.value,
-                    timestamp: Date.now(),
-                });
+            onData: (data: ReceiveData) => {
+                this.datas.push(data);
             },
             onCall: (conn, stream) => {
                 console.log(conn, stream);
@@ -201,6 +198,18 @@ export class RootComponent implements OnInit, OnDestroy {
                     this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
                 }
             },
+            onError: (error) => {
+                this.errors.push({
+                    errorType: error?.type,
+                    errorMessage: error?.message,
+                });
+            },
+            onConnectionsDisconnected: () => {
+                this.connect();
+            },
+            onDestroy: () => {
+                this.initalizePeer(this.peerID);
+            },
         });
     }
 
@@ -211,11 +220,14 @@ export class RootComponent implements OnInit, OnDestroy {
             return;
         }
 
-        const value = sendFormControl.value;
+        const message = "" + (sendFormControl.value || '');
 
         sendFormControl.patchValue('');
 
-        this.peer?.send(value);
+        this.peer?.send({
+            dataType: 'message',
+            value: message,
+        });
     }
 
     public setUser(): Promise<void> {
@@ -272,6 +284,10 @@ export class RootComponent implements OnInit, OnDestroy {
         }
 
         this.peer?.connect(this.machineData.value.peerID);
+    }
+
+    public clearErrors(): void {
+        this.errors = [];
     }
 
     public ngOnDestroy(): void {

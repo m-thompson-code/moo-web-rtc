@@ -15,7 +15,7 @@
 
     <div *ngIf="machineData.value">
         <div>
-            global machine peerID: {{ machineData.value.peerID }} {{ peerID === machineData.value?.peerID ? 'you are the global machine' : '' }}
+            global machine peerID: <span class="bold">{{ machineData.value.peerID }}</span> {{ peerID === machineData.value?.peerID ? 'you are the global machine' : '' }}
         </div>
 
         <br>
@@ -96,7 +96,17 @@
 
 <br>
 
-<div *ngIf="peer?.sentConnection">
+<div *ngIf="peer?.sentDataConnection?.open === false">
+    sendDataConnection is pending...
+</div>
+
+<div *ngIf="peer?.sentDataConnection?.open">
+    <div>
+        <button (click)="peer?.disconnectConnections()">Disconnect connections</button>
+    </div>
+    
+    <br>
+
     <form [formGroup]="formGroup" (ngSubmit)="submit()">
         <input formControlName="send"><button type="submit">Send</button>
     </form>
@@ -110,4 +120,30 @@
 
 <div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
     Click here to start
+</div>
+
+<br>
+
+<div>
+    <div>
+        Errors:
+    </div>
+
+    <br>
+
+    <div *ngIf="!errors.length"> None <br></div>
+
+    <div *ngFor="let error of errors">
+        <div>
+            {{ error.errorType || "Unknown type" }}
+        </div>
+
+        <div>
+            {{ error.errorMessage || "Unknown message" }}
+        </div>
+
+        <br>
+    </div>
+
+    <button (click)="clearErrors()">Clear errors</button>
 </div>

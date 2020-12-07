@@ -2,7 +2,7 @@ import { Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild } from '@an
 import { Subscription } from 'rxjs';
 
 import { FirebaseService, MachineData, PrivatePlayerData } from '@app/services/firebase.service';
-import { PeerjsService, PeerWrapper } from '@app/services/peerjs.service';
+import { PeerjsService, PeerWrapper, ReceiveData } from '@app/services/peerjs.service';
 import { VideoService } from '@app/services/video.service';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 
@@ -31,12 +31,13 @@ export class MachineComponent implements OnInit, OnDestroy {
         isPending: boolean;
     } = { value: undefined, isPending: true };
 
-    public myStream?: MediaStream;
+    public machineMediaStream?: MediaStream;
 
-    public datas: {
-        peerID: string;
-        value: string;
-        timestamp: number;
+    public datas: ReceiveData[] = [];
+    
+    public errors: {
+        errorType?: string;
+        errorMessage?: string;
     }[] = [];
 
     constructor(private fb: FormBuilder, private ngZone: NgZone, private peerjsService: PeerjsService, 
@@ -62,25 +63,10 @@ export class MachineComponent implements OnInit, OnDestroy {
         
         // TODO: Bring back audio (just for testing)
         navigator.getUserMedia({video: true, audio: false}, mediaStream => {
-            if (this.peer) {
-                this.peer.destroy();
-            }
-
-            this.peer = this.peerjsService.getPeer({
-                peerID: this.peerID,
-                onData: (data: any, peerID: string) => {
-                    this.datas.push({
-                        peerID: peerID,
-                        value: data.value,
-                        timestamp: Date.now(),
-                    });
-                },
-                mediaStream: mediaStream,
-                isCaller: true,
-            });
-
-            this.myStream = mediaStream;
+            this.machineMediaStream = mediaStream;
             this.videoService.bindVideoStream(this.video.nativeElement, mediaStream);
+
+            this.setupPeer();
 
             if (this.currentPrivatePlayersData.value?.peerID) {
                 this.connect();
@@ -118,6 +104,33 @@ export class MachineComponent implements OnInit, OnDestroy {
     public handleRequiredInteraction(): void {
         this.videoService.playAllVideos();
     }
+
+    public setupPeer() {
+        if (this.peer) {
+            this.peer.destroy();
+        }
+
+        this.peer = this.peerjsService.getPeer({
+            peerID: this.peerID,
+            onData: (data: ReceiveData) => {
+                this.datas.push(data);
+            },
+            mediaStream: this.machineMediaStream,
+            isCaller: true,
+            onError: (error) => {
+                this.errors.push({
+                    errorType: error?.type,
+                    errorMessage: error?.message,
+                });
+            },
+            onConnectionsDisconnected: () => {
+                this.connect();
+            },
+            onDestroy: () => {
+                this.setupPeer();
+            },
+        });
+    }
     
     public submit(): void {
         const sendFormControl = this.formGroup.get('send');
@@ -126,11 +139,14 @@ export class MachineComponent implements OnInit, OnDestroy {
             return;
         }
 
-        const value = sendFormControl.value;
+        const message = "" + (sendFormControl.value || '');
 
         sendFormControl.patchValue('');
 
-        this.peer?.send(value);
+        this.peer?.send({
+            dataType: 'message',
+            value: message,
+        });
     }
 
     public connect(): void {
@@ -146,11 +162,15 @@ export class MachineComponent implements OnInit, OnDestroy {
     }
 
     public call(): void {
-        if (this.myStream && this.currentPrivatePlayersData.value) {
-            this.peer?.call(this.myStream, this.currentPrivatePlayersData.value.peerID);                
+        if (this.machineMediaStream && this.currentPrivatePlayersData.value) {
+            this.peer?.call(this.machineMediaStream, this.currentPrivatePlayersData.value.peerID);                
         } else {
             throw Error("Missing stream and/or otherPeerID");
         }
+    }
+
+    public clearErrors(): void {
+        this.errors = [];
     }
 
     public ngOnDestroy(): void {

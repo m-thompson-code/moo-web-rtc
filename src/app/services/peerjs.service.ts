@@ -9,10 +9,42 @@ import { FirebaseService } from './firebase.service';
 
 const REMOTE_SERVER_HOST = 'moo-web-rtc-server.uc.r.appspot.com';
 
-export type OnDataFunc = (
-    data: any,
-    peerID: string,
-) => void;
+export type RequestActionDataValue = 'call-me' | 'connect-me' | 'message-me';
+
+export interface RequestActionData {
+    dataType: 'request-action';
+    value: RequestActionDataValue;
+}
+
+export type PingDataValue = 'send-ping-data-connection' | 'received-ping-data-connection' | 'send-ping-call-connection' | 'received-ping-call-connection';
+
+export interface PingData {
+    dataType: 'ping';
+    value: PingDataValue;
+}
+
+export type MessageDataValue = string;
+
+export interface MessageData {
+    dataType: 'message';
+    value: MessageDataValue;
+}
+
+export type ControllerDataValue = 'left-pressed' | 'left-released' | 'right-pressed' | 'right-released' | 'up-pressed' | 'up-released' | 'down-pressed' | 'down-released' | 'drop-pressed' | 'drop-released';
+
+export interface ControllerData {
+    dataType: 'controller';
+    value: ControllerDataValue;
+}
+
+export type SendData = RequestActionData | PingData | MessageData | ControllerData;
+
+export type ReceiveData = SendData & {
+    peerID: string;
+    timestamp: number;// Milliseconds
+}
+
+export type OnDataFunc = (data: ReceiveData) => void;
 
 interface _PeerWrapperInit {
     peerID: string;
@@ -21,6 +53,9 @@ interface _PeerWrapperInit {
     onData: OnDataFunc;
     onCall?: (conn: Peer.MediaConnection, stream: MediaStream) => void;
     onCallConnectionClosed?: () => void;
+    onError: (error: any) => void;
+    onConnectionsDisconnected: () => void;
+    onDestroy:() => void;
     server?: 'local' | 'remote';
     debugLevel?: DebugLevel;
 }
@@ -55,13 +90,13 @@ export type GetPeerOptions = IsNotCaller | IsCaller;
  */
 export class PeerWrapper {
     public peer: Peer;
-    public sentConnection?:Peer.DataConnection;
-    public requestedConnection?: Peer.DataConnection;
+    public sentDataConnection?:Peer.DataConnection;
+    public requestedDataConnection?: Peer.DataConnection;
     public sentCallConnection?: Peer.MediaConnection;
     public requestedCallConnection?: Peer.MediaConnection;
 
     public state: 'pending' | 'initalized' | 'destroyed' = 'pending';
-    public peerState: 'pending' | 'initalizing' | 'open' | 'connecting' | 'connected' | 'off' = 'pending';
+    public peerState: 'pending' | 'initalizing' | 'open' | 'connecting' | 'connected' | 'destroyed' = 'pending';
 
     public peerID: string;
 
@@ -141,16 +176,16 @@ export class PeerWrapper {
 
                 this.peerState = 'connecting';
 
-                if (this.requestedConnection) {
-                    this.requestedConnection.close();
-                    this.requestedConnection = undefined;
+                if (this.requestedDataConnection) {
+                    this.requestedDataConnection.close();
+                    this.requestedDataConnection = undefined;
                 }
 
-                this.requestedConnection = conn;
+                this.requestedDataConnection = conn;
             
                 conn.on('open', () => {
                     this.ngZone.run(() => {
-                        console.log("peer > requestedConnection open (we will reserve data from this peer now) - open", conn.peer);
+                        console.log("peer > requestedDataConnection open (we will reserve data from this peer now) - open", conn.peer);
 
                         this.peerState = 'connected';
                 
@@ -158,7 +193,13 @@ export class PeerWrapper {
                             this.ngZone.run(() => {
                                 console.log("peer > conn - data", data, conn.peer);
 
-                                this.options.onData(data, conn.peer);
+                                console.log(conn.peer);
+
+                                if (conn.peer !== data.peerID) {
+                                    console.warn("Unexpected mismatch peerID from data and DataConnection");
+                                }
+
+                                this.options.onData(data);
                             });
                         });
                     });
@@ -181,7 +222,7 @@ export class PeerWrapper {
 
                         // TODO: handle error better and perform retries
 
-                        this._handleError(error);
+                        this._handleError(error, conn);
                     });
                 });
             });
@@ -252,7 +293,7 @@ export class PeerWrapper {
 
                         // TODO: handle error better and perform retries
 
-                        this._handleError(error);
+                        this._handleError(error, conn);
                     });
                 });
             });
@@ -279,7 +320,7 @@ export class PeerWrapper {
             this.ngZone.run(() => {
                 console.log('peer - error');
 
-                this._handleError(error);
+                this._handleError(error, this.peer);
             });
         });
 
@@ -289,7 +330,7 @@ export class PeerWrapper {
     /**
      * Connect to other peer. A nice note is that the Peer.DataConnection returned 
      * from this method doesn't have an on data listener. The propery spot is the 
-     * Peer.DataConnection found on the requestedConnection
+     * Peer.DataConnection found on the requestedDataConnection
      */
     public connect(otherPeerID?: string): Peer.DataConnection {
         this.otherPeerID = otherPeerID || this.otherPeerID;
@@ -302,26 +343,26 @@ export class PeerWrapper {
 
         console.log("data connection requested...", this.otherPeerID);
 
-        // Close any other sentConnections that may exist
-        if (this.sentConnection) {
-            this.sentConnection.close();
+        // Close any other sentDataConnections that may exist
+        if (this.sentDataConnection) {
+            this.sentDataConnection.close();
         }
 
         const conn = this.peer.connect(this.otherPeerID, {
             serialization: 'json'// Required for Safari support: https://github.com/peers/peerjs#safari
         });
 
-        this.sentConnection = conn;
+        this.sentDataConnection = conn;
 
         conn.on('open', () => {
             this.ngZone.run(() => {
-                console.log("peer > sentConnection - open", conn.peer);
+                console.log("peer > sentDataConnection - open", conn.peer);
             });
         });
 
         conn.on('close', () => {
             this.ngZone.run(() => {
-                console.log("peer > sentConnection - close");
+                console.log("peer > sentDataConnection - close");
 
                 this.disconnectConnections();
             });
@@ -332,11 +373,11 @@ export class PeerWrapper {
             this.ngZone.run(() => {
                 console.warn("testing if connections when error are 'open'", conn.open, conn.peer);
 
-                console.log("peer > sentConnection - error", conn.peer);
+                console.log("peer > sentDataConnection - error", conn.peer);
 
                 // TODO: handle error better and perform retries
 
-                this._handleError(error);
+                this._handleError(error, conn);
             });
         });
 
@@ -348,16 +389,16 @@ export class PeerWrapper {
      */
     public disconnectConnections(): void {
         // TODO: add onDisconnect to clean up MediaStream stuff
-        console.log("disconnect", this.sentConnection, this.requestedConnection, this.requestedCallConnection);
+        console.log("disconnect", this.sentDataConnection, this.requestedDataConnection, this.requestedCallConnection);
 
-        if (this.sentConnection) {
-            this.sentConnection.close();
-            this.sentConnection = undefined;
+        if (this.sentDataConnection) {
+            this.sentDataConnection.close();
+            this.sentDataConnection = undefined;
         }
 
-        if (this.requestedConnection) {
-            this.requestedConnection.close();
-            this.requestedConnection = undefined;
+        if (this.requestedDataConnection) {
+            this.requestedDataConnection.close();
+            this.requestedDataConnection = undefined;
         }
         
         if (this.sentCallConnection) {
@@ -370,29 +411,34 @@ export class PeerWrapper {
             this.requestedCallConnection = undefined;
         }
 
-        if (this.peer && this.peerState !== 'off') {
+        if (this.peer && this.peerState !== 'destroyed') {
             if (this.peerState === 'connecting') {
                 console.warn("Unexpected connecting is interupted (peerState is 'connecting')");
+            } else {
+                this.peerState = 'open';
             }
-            this.peerState = 'open';
         } else {
-            this.peerState = 'off';
+            this.peerState = 'destroyed';
         }
     }
 
-    public send(value: any): void {
-        if (!this.sentConnection) {
-            throw new Error("Unexpected missing sentConnection. This is required to send data to the other peer");
+    public send(data: SendData): void {
+        if (!this.sentDataConnection) {
+            throw new Error("Unexpected missing sentDataConnection. This is required to send data to the other peer");
         }
 
-        const data = {
-            value: value,
-            sentTimestamp: Date.now(),
+        // TODO: validate dataType
+
+        const receivedData: ReceiveData = {
+            peerID: this.peer.id,
+            value: data.value,
+            dataType: data.dataType as any,
+            timestamp: Date.now(),
         };
 
-        this.sentConnection.send(data);
+        this.sentDataConnection.send(receivedData);
 
-        this.options.onData(data, this.peer.id);
+        this.options.onData(receivedData);
     }
 
     public call(mediaStream?: MediaStream, otherPeerID?: string): Peer.MediaConnection {
@@ -441,11 +487,11 @@ export class PeerWrapper {
                 // TODO: properly handle if this call has closed
                 // Handle if we should retry or just let it go
 
-                // this.disconnectConnections();
+                this.disconnectConnections();
 
-                // // TODO: handle error better and perform retries
+                // TODO: handle error better and perform retries
 
-                // this.options.onCallConnectionClosed?.();
+                this.options.onCallConnectionClosed?.();
             });
         });
 
@@ -458,7 +504,7 @@ export class PeerWrapper {
 
                 // TODO: handle error better and perform retries
 
-                this._handleError(error);
+                this._handleError(error, conn);
             });
         });
 
@@ -467,42 +513,121 @@ export class PeerWrapper {
         return conn;
     }
 
-    private _handleError(error: any): void {
+    private _handleError(error: any, connOrPeer: Peer | Peer.DataConnection | Peer.MediaConnection): void {
+        let destroyPeer = false;
+        let disconnectConnections = false;
+
         if (error.type) {
             if (error.type === 'browser-incompatible') {
-                // TODO: this error properly
                 console.error('browser-incompatible', error);
-            } else if (error.type === 'disconnect') {
-                // TODO: this error properly
-                console.error('disconnect', error);
-            } else if (error.type === 'disconnect') {
-                // TODO: this error properly
-                console.error('invalid-id', error);
+                // The client's browser does not support some or all WebRTC features that you are trying to use.
+                // Fatal error, peerJS should destroy peer for us
+
+                destroyPeer = true;
+                disconnectConnections = true;
+            } else if (error.type === 'disconnected') {
+                console.error('disconnected', error);
+                // You've already disconnected this peer from the server and can no longer make any new connections on it.
+                // Error is labeled as not fatal, so peerJS won't destroy the peer as it normally would in other errors that are fatal
+
+                // TODO: should we destroy peer and clean up connections?
+                destroyPeer = true;
+                disconnectConnections = true;
             } else if (error.type === 'invalid-id') {
-                // TODO: this error properly
-                console.error('network', error);
+                console.error('invalid-id', error);
+                // The ID passed into the Peer constructor contains illegal characters.
+                // Fatal error, peerJS should destroy peer for us
+
+                destroyPeer = true;
+                disconnectConnections = true;
             } else if (error.type === 'network') {
-                // TODO: this error properly
-                console.error('peer-unavailable', error);
+                console.error('network', error);
+                // This error occures: "Lost or cannot establish a connection to the signalling server"
+                // Error is labeled as not fatal, so peerJS won't destroy the peer as it normally would in other errors that are fatal
+
+                // TODO: this network error properly (maybe we should clean up connections)
             } else if (error.type === 'peer-unavailable') {
-                // TODO: this error properly
-                console.error('ssl-unavailable', error);
+                console.error('peer-unavailable', error);
+                // Peer that was attempted to be connected was unavailable
+                // Error is labeled as not fatal, so peerJS won't destroy the peer as it normally would in other errors that are fatal
+
+                // Clean up connections
+                disconnectConnections = true;
             } else if (error.type === 'ssl-unavailable') {
-                // TODO: this error properly
-                console.error('server-error', error);
+                console.error('ssl-unavailable', error);
+                // PeerJS is being used securely, but the cloud server does not support SSL. Use a custom PeerServer.
+                // Fatal error, peerJS should destroy peer for us
+
+                destroyPeer = true;
+                disconnectConnections = true;
             } else if (error.type === 'server-error') {
-                // TODO: this error properly
-                console.error('socket-error', error);
+                console.error('server-error', error);
+                // Unable to reach the server.
+                // Fatal error, peerJS should destroy peer for us
+
+                destroyPeer = true;
+                disconnectConnections = true;
             } else if (error.type === 'socket-error') {
-                // TODO: this error properly
-                console.error('socket-closed', error);
+                console.error('socket-error', error);
+                // An error from the underlying socket.
+                // Fatal error, peerJS should destroy peer for us
+
+                destroyPeer = true;
+                disconnectConnections = true;
             } else if (error.type === 'socket-closed') {
-                // TODO: this error properly
+                console.error('socket-closed', error);
+                // The underlying socket closed unexpectedly.
+                // Fatal error, peerJS should destroy peer for us
+
+                destroyPeer = true;
+                disconnectConnections = true;
+            } else if (error.type === 'unavailable-id') {
                 console.error('unavailable-id', error);
+                // Labeled as sometimes fatal
+                // We don't try to reconnect peers if they disconnect, so we shouldn't run into this error
+                // Instead we create a new peer
+
+                // Clean up will be handled below as needed for peer, but let's close connections to be safe
+                disconnectConnections = true;
+            } else if (error.type === 'webrtc') {
+                console.error('webrtc', error);
+                // Native WebRTC errors.
+                // Error is labeled as not fatal, so peerJS won't destroy the peer as it normally would in other errors that are fatal
+
+                // TODO: handle Native WebRTC errors (?) Can't find a reference to any list of errors
+            } else {
+                // Unexpected type
+                console.error("Unexpected error type", error.type, error);
             }
+        } else {
+            console.error(error);
         }
 
-        console.error(error);
+        try {
+            this.options.onError(error);
+        } catch(onError) {
+            console.warn(onError);
+        }
+
+        const peer = connOrPeer as Peer;
+
+        if (peer.destroyed === true) {
+            console.error('peer was destroyed as a result of this error, cleaning up connections and peer object');
+
+            this.disconnectConnections();
+
+            this.destroy();
+
+            return;
+        }
+
+        const conn = connOrPeer as (Peer.DataConnection | Peer.MediaConnection);
+
+        if (disconnectConnections || !conn.open) {
+            console.error('connection has closed as a result of this error, cleaning up connections');
+
+            this.disconnectConnections();
+        }
     }
 
     /**
@@ -523,6 +648,8 @@ export class PeerWrapper {
         this.disconnectConnections();
         
         this.peer.destroy();
+
+        this.peerState = 'destroyed';
     }
 }
 

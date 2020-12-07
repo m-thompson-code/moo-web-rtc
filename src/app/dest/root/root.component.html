@@ -117,7 +117,7 @@
         </div>
 
 
-        <div *ngIf="currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid && !peer?.sentConnection">
+        <div *ngIf="currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid && !peer?.sentDataConnection">
             <br>
 
             <button (click)="connect()">Connect to machine</button>
@@ -127,13 +127,17 @@
 
 <br>
 
-<div *ngIf="peer?.sentConnection">
-    <button (click)="peer?.disconnectConnections()">Disconnect connections</button>
+<div *ngIf="peer?.sentDataConnection?.open === false">
+    sendDataConnection is pending...
 </div>
 
-<br>
+<div *ngIf="peer?.sentDataConnection?.open">
+    <div>
+        <button (click)="peer?.disconnectConnections()">Disconnect connections</button>
+    </div>
+    
+    <br>
 
-<div *ngIf="peer?.sentConnection">
     <form [formGroup]="formGroup" (ngSubmit)="submit()">
         <input formControlName="send"><button type="submit">Send</button>
     </form>
@@ -147,4 +151,28 @@
 
 <div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
     Click here to start
+</div>
+
+<div>
+    <div>
+        Errors:
+    </div>
+
+    <br>
+
+    <div *ngIf="!errors.length"> None <br></div>
+
+    <div *ngFor="let error of errors">
+        <div>
+            {{ error.errorType || "Unknown type" }}
+        </div>
+
+        <div>
+            {{ error.errorMessage || "Unknown message" }}
+        </div>
+
+        <br>
+    </div>
+
+    <button (click)="clearErrors()">Clear errors</button>
 </div>
