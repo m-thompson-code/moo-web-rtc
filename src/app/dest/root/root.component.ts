@@ -22,7 +22,8 @@ export class RootComponent implements OnInit, OnDestroy {
     public formGroup!: FormGroup;
     public setPlayerFormGroup!: FormGroup;
 
-    public peerID: string = "";
+    public peerID?: string;
+    public machinePeerID?: string;
     public peer?: PeerWrapper;
 
     public datas: ReceiveData[] = [];
@@ -94,7 +95,6 @@ export class RootComponent implements OnInit, OnDestroy {
     }
 
     public _init(): void {
-        
         this.publicPlayersData = {
             value: [],
             isPending: true,
@@ -118,9 +118,7 @@ export class RootComponent implements OnInit, OnDestroy {
             if (this.currentPublicPlayerData.value?.uid !== this.myPrivatePlayerData.value?.uid) {
                 this.peer?.disconnectConnections();
             } else {
-                if (this.machineData.value) {
-                    this.peer?.setOtherPeerID(this.machineData.value.peerID);
-                }
+                this.initalizePeer();
             }
         }));
 
@@ -130,9 +128,9 @@ export class RootComponent implements OnInit, OnDestroy {
                 isPending: false,
             };
 
-            if (this.machineData.value) {
-                this.peer?.setOtherPeerID(this.machineData.value.peerID);
-            }
+            this.machinePeerID = machine?.peerID;
+
+            this.initalizePeer();
         }));
 
         this._sub2?.unsubscribe();
@@ -159,25 +157,32 @@ export class RootComponent implements OnInit, OnDestroy {
                     isPending: false,
                 };
 
-                if (this.myPrivatePlayerData.value?.peerID) {
-                    this.initalizePeer(this.myPrivatePlayerData.value?.peerID);
-                } else {
-                    this.peer?.destroy();
-                }
+                this.peerID = this.myPrivatePlayerData.value?.peerID;
+
+                this.initalizePeer();
             });
         }
     }
     
-    public initalizePeer(peerID: string): void {
-        this.peerID = peerID;
-
-        if (this.peer) {
-            this.peer.destroy();
+    public initalizePeer(): void {
+        if (!this.peerID) {
+            console.warn("Unexpected missing peerID");
+            return;
         }
 
-        this.peer = this.peerjsService.getPeer({
-            peerID: peerID,
-            otherPeerID: this.machineData.value?.peerID,
+        if (!this.machinePeerID) {
+            console.warn("Unexpected missing machine peerID");
+            return;
+        }
+
+        if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
+            this.peer.destroy();
+            this.peer = undefined;
+        }
+
+        this.peer = this.peer || this.peerjsService.getPeer({
+            peerID: this.peerID,
+            otherPeerID: this.machinePeerID,
             onData: (data: ReceiveData) => {
                 this.datas.push(data);
             },
@@ -203,14 +208,32 @@ export class RootComponent implements OnInit, OnDestroy {
                     errorType: error?.type,
                     errorMessage: error?.message,
                 });
+
+                if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
+                    this.peer?.destroy();
+
+                    this.initalizePeer();
+                } else if (!this.peer?.sentCallConnection?.open) {
+                    this.connect();
+                }
             },
             onConnectionsDisconnected: () => {
-                this.connect();
+                if (this.machineStream) {
+                    this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
+                }
             },
             onDestroy: () => {
-                this.initalizePeer(this.peerID);
+                if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
+                    this.peer?.destroy();
+
+                    this.initalizePeer();
+                } else if (!this.peer?.sentCallConnection?.open) {
+                    this.connect();
+                }
             },
         });
+
+        this.peer.setOtherPeerID(this.machinePeerID);
     }
 
     public submit(): void {
@@ -278,12 +301,26 @@ export class RootComponent implements OnInit, OnDestroy {
     }
 
     public connect(): void {
-        if (!this.machineData.value?.peerID) {
-            console.warn("Unexpected missing machine peerID");
+        if (!this.currentPublicPlayerData.value || !this.myPrivatePlayerData.value || this.myPrivatePlayerData.value?.uid !== this.currentPublicPlayerData.value?.uid) {
+            console.warn("Unexpected current player is this player (based on uid). Aborting connect");
             return;
         }
 
-        this.peer?.connect(this.machineData.value.peerID);
+        if (!this.machineData.value?.peerID) {
+            console.warn("Unexpected missing machine peerID. Aborting connect");
+            return;
+        }
+
+        if (!this.peer) {
+            console.warn("Unexpected missing peer");
+            return;
+        }
+
+        this.peer.connect();
+    }
+
+    public clearDatas(): void {
+        this.datas = [];
     }
 
     public clearErrors(): void {

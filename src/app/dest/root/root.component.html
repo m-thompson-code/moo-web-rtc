@@ -99,10 +99,10 @@
 
     <div>
         <div>
-            UID: {{ currentPublicPlayerData.value?.uid || '...' }} {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
+            <span class="bold">UID: {{ currentPublicPlayerData.value?.uid || '...' }}</span> {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
         </div>
         <div>
-            Your UID: {{ myPrivatePlayerData.value?.uid || '...' }} {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
+            <span class="bold">Your UID: {{ myPrivatePlayerData.value?.uid || '...' }}</span> {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
         </div>
 
         <br>
@@ -149,9 +149,13 @@
     {{ data.peerID }} {{ data.timestamp | date:'short' }}: {{ data.value }}
 </div>
 
-<div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
-    Click here to start
+<br>
+
+<div>
+    <button (click)="clearDatas()">Clear datas</button>
 </div>
+
+<br>
 
 <div>
     <div>
@@ -175,4 +179,10 @@
     </div>
 
     <button (click)="clearErrors()">Clear errors</button>
+</div>
+
+
+
+<div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
+    Click here to start
 </div>

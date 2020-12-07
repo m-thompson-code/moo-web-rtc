@@ -19,6 +19,7 @@ export class MachineComponent implements OnInit, OnDestroy {
     private _sub?: Subscription;
 
     public peerID!: string;
+    public currentPlayerPeerID?: string;
     public peer?: PeerWrapper;
 
     public currentPrivatePlayersData: {
@@ -48,9 +49,7 @@ export class MachineComponent implements OnInit, OnDestroy {
     }
 
     private _init(): void {
-        this.peerID = localStorage.getItem('machine-peer-id') || this.peerjsService.getRandomPeerID();
-
-        localStorage.setItem('machine-peer-id', this.peerID);
+        this.peerID = this._getMyMachinePeerID();
 
         this.formGroup = this.fb.group({
             'send': new FormControl({
@@ -66,7 +65,7 @@ export class MachineComponent implements OnInit, OnDestroy {
             this.machineMediaStream = mediaStream;
             this.videoService.bindVideoStream(this.video.nativeElement, mediaStream);
 
-            this.setupPeer();
+            this.initalizePeer();
 
             if (this.currentPrivatePlayersData.value?.peerID) {
                 this.connect();
@@ -84,9 +83,9 @@ export class MachineComponent implements OnInit, OnDestroy {
                 isPending: false,
             };
 
-            if (this.currentPrivatePlayersData.value?.peerID) {
-                this.peer?.setOtherPeerID(this.currentPrivatePlayersData.value.peerID);
-            }
+            this.currentPlayerPeerID = this.currentPrivatePlayersData.value?.peerID;
+
+            this.initalizePeer();
         });
 
         this._sub.add(this.firebaseService.getMachineData().subscribe(machine => {
@@ -105,13 +104,32 @@ export class MachineComponent implements OnInit, OnDestroy {
         this.videoService.playAllVideos();
     }
 
-    public setupPeer() {
-        if (this.peer) {
-            this.peer.destroy();
+    public initalizePeer() {
+        this.peerID = this._getMyMachinePeerID();
+
+        if (!this.peerID) {
+            console.warn("Unexpected missing peerID");
+            return;
         }
 
-        this.peer = this.peerjsService.getPeer({
+        if (!this.currentPlayerPeerID) {
+            console.warn("Unexpected missing current player peerID");
+            return;
+        }
+
+        if (!this.machineMediaStream) {
+            console.warn("Unexpected missing machineMediaStream");
+            return;
+        }
+
+        if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
+            this.peer.destroy();
+            this.peer = undefined;
+        }
+
+        this.peer = this.peer || this.peerjsService.getPeer({
             peerID: this.peerID,
+            otherPeerID: this.currentPlayerPeerID,
             onData: (data: ReceiveData) => {
                 this.datas.push(data);
             },
@@ -122,14 +140,42 @@ export class MachineComponent implements OnInit, OnDestroy {
                     errorType: error?.type,
                     errorMessage: error?.message,
                 });
+
+                if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
+                    this.peer?.destroy();
+
+                    this.initalizePeer();
+                } else {
+                    if (!this.peer?.sentCallConnection?.open) {
+                        this.connect();
+                    }
+
+                    if (!this.peer?.callConfirmed) {
+                        this.call();
+                    }
+                }
             },
             onConnectionsDisconnected: () => {
-                this.connect();
+                // this.connect();
             },
             onDestroy: () => {
-                this.setupPeer();
+                if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
+                    this.peer?.destroy();
+
+                    this.initalizePeer();
+                } else {
+                    if (!this.peer?.sentCallConnection?.open) {
+                        this.connect();
+                    }
+
+                    if (!this.peer?.callConfirmed) {
+                        this.call();
+                    }
+                }
             },
         });
+
+        this.peer.setOtherPeerID(this.currentPlayerPeerID);
     }
     
     public submit(): void {
@@ -150,27 +196,39 @@ export class MachineComponent implements OnInit, OnDestroy {
     }
 
     public connect(): void {
-        if (!this.currentPrivatePlayersData.value?.peerID) {
-            throw Error("Unexpected missing player peerID");
-        }
-
         if (!this.peer) {
             throw Error("Unexpected missing peer");
         }
 
-        this.peer.connect(this.currentPrivatePlayersData.value.peerID);
+        this.peer.connect();
     }
 
     public call(): void {
-        if (this.machineMediaStream && this.currentPrivatePlayersData.value) {
-            this.peer?.call(this.machineMediaStream, this.currentPrivatePlayersData.value.peerID);                
-        } else {
-            throw Error("Missing stream and/or otherPeerID");
+        if (!this.peer) {
+            throw Error("Unexpected missing peer");
         }
+
+        if (!this.machineMediaStream) {
+            throw Error("Missing stream");
+        }
+
+        this.peer.call(this.machineMediaStream);
+    }
+
+    public clearDatas(): void {
+        this.datas = [];
     }
 
     public clearErrors(): void {
         this.errors = [];
+    }
+
+    private _getMyMachinePeerID(): string {
+        const peerID = this.peerID || localStorage.getItem('machine-peer-id') || this.peerjsService.getRandomPeerID();
+
+        localStorage.setItem('machine-peer-id', peerID);
+
+        return peerID;
     }
 
     public ngOnDestroy(): void {
