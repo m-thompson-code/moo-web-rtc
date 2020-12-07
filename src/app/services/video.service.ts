@@ -19,16 +19,20 @@ export class VideoService {
         this.videosToPlay.push(video);
     }
 
-    public playAllVideos(): void {
-        // const videos = document.querySelectorAll('video');
+    public playAllVideos(): Promise<void> {
+        const promises: Promise<any>[] = [];
 
         this.videosToPlay.forEach(video => {
-            this.playVideo(video);
+            promises.push(this.playVideo(video));
         });
 
         this.videosToPlay = [];
 
         this.handledRequiredInteraction = true;
+
+        return Promise.all(promises).then(() => {
+            // pass
+        });
     }
 
     public playVideo(video: HTMLVideoElement, attempt: number = 0): Promise<void> {

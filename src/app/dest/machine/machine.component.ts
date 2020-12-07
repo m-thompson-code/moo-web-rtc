@@ -126,56 +126,58 @@ export class MachineComponent implements OnInit, OnDestroy {
             this.peer.destroy();
             this.peer = undefined;
         }
+        if (!this.peer) {
+            this.peer = this.peerjsService.getPeer({
+                peerID: this.peerID,
+                otherPeerID: this.currentPlayerPeerID,
+                onData: (data: ReceiveData) => {
+                    this.datas.push(data);
+                },
+                mediaStream: this.machineMediaStream,
+                isCaller: true,
+                onError: (error) => {
+                    this.errors.push({
+                        errorType: error?.type,
+                        errorMessage: error?.message,
+                    });
 
-        this.peer = this.peer || this.peerjsService.getPeer({
-            peerID: this.peerID,
-            otherPeerID: this.currentPlayerPeerID,
-            onData: (data: ReceiveData) => {
-                this.datas.push(data);
-            },
-            mediaStream: this.machineMediaStream,
-            isCaller: true,
-            onError: (error) => {
-                this.errors.push({
-                    errorType: error?.type,
-                    errorMessage: error?.message,
-                });
+                    if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
+                        this.peer?.destroy();
 
-                if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
-                    this.peer?.destroy();
+                        this.initalizePeer();
+                    } else {
+                        if (!this.peer?.sentCallConnection?.open) {
+                            this.connect();
+                        }
 
-                    this.initalizePeer();
-                } else {
-                    if (!this.peer?.sentCallConnection?.open) {
-                        this.connect();
+                        if (!this.peer?.callConfirmed) {
+                            this.call();
+                        }
                     }
+                },
+                onConnectionsDisconnected: () => {
+                    // this.connect();
+                },
+                onDestroy: () => {
+                    if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
+                        this.peer?.destroy();
 
-                    if (!this.peer?.callConfirmed) {
-                        this.call();
+                        this.initalizePeer();
+                    } else {
+                        if (!this.peer?.sentCallConnection?.open) {
+                            this.connect();
+                        }
+
+                        if (!this.peer?.callConfirmed) {
+                            this.call();
+                        }
                     }
-                }
-            },
-            onConnectionsDisconnected: () => {
-                // this.connect();
-            },
-            onDestroy: () => {
-                if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
-                    this.peer?.destroy();
+                },
+            });
 
-                    this.initalizePeer();
-                } else {
-                    if (!this.peer?.sentCallConnection?.open) {
-                        this.connect();
-                    }
-
-                    if (!this.peer?.callConfirmed) {
-                        this.call();
-                    }
-                }
-            },
-        });
-
-        this.peer.setOtherPeerID(this.currentPlayerPeerID);
+        } else {
+            this.peer.setOtherPeerID(this.currentPlayerPeerID);
+        }
     }
     
     public submit(): void {

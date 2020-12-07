@@ -10,6 +10,7 @@ import { PeerjsService, PeerWrapper, ReceiveData } from '@app/services/peerjs.se
 import { VideoService } from '@app/services/video.service';
 
 import * as faker from 'faker';
+import { timeout } from 'rxjs/operators';
 
 @Component({
     selector: 'app-root',
@@ -180,60 +181,62 @@ export class RootComponent implements OnInit, OnDestroy {
             this.peer = undefined;
         }
 
-        this.peer = this.peer || this.peerjsService.getPeer({
-            peerID: this.peerID,
-            otherPeerID: this.machinePeerID,
-            onData: (data: ReceiveData) => {
-                this.datas.push(data);
-            },
-            onCall: (conn, stream) => {
-                console.log(conn, stream);
-
-                if (this.machineStream) {
-                    this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
-                }
-
-                this.machineStream = stream;
-                
-                this.videoService.pushPendingVideo(this.machineVideo.nativeElement);
-                this.videoService.bindVideoStream(this.machineVideo.nativeElement, stream);
-            },
-            onCallConnectionClosed: () => {
-                if (this.machineStream) {
-                    this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
-                }
-            },
-            onError: (error) => {
-                this.errors.push({
-                    errorType: error?.type,
-                    errorMessage: error?.message,
-                });
-
-                if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
-                    this.peer?.destroy();
-
-                    this.initalizePeer();
-                } else if (!this.peer?.sentCallConnection?.open) {
-                    this.connect();
-                }
-            },
-            onConnectionsDisconnected: () => {
-                if (this.machineStream) {
-                    this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
-                }
-            },
-            onDestroy: () => {
-                if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
-                    this.peer?.destroy();
-
-                    this.initalizePeer();
-                } else if (!this.peer?.sentCallConnection?.open) {
-                    this.connect();
-                }
-            },
-        });
-
-        this.peer.setOtherPeerID(this.machinePeerID);
+        if (!this.peer) {
+            this.peer = this.peerjsService.getPeer({
+                peerID: this.peerID,
+                otherPeerID: this.machinePeerID,
+                onData: (data: ReceiveData) => {
+                    this.datas.push(data);
+                },
+                onCall: (conn, stream) => {
+                    console.log(conn, stream);
+    
+                    if (this.machineStream) {
+                        this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
+                    }
+    
+                    this.machineStream = stream;
+                    
+                    this.videoService.pushPendingVideo(this.machineVideo.nativeElement);
+                    this.videoService.bindVideoStream(this.machineVideo.nativeElement, stream);
+                },
+                onCallConnectionClosed: () => {
+                    if (this.machineStream) {
+                        this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
+                    }
+                },
+                onError: (error) => {
+                    this.errors.push({
+                        errorType: error?.type,
+                        errorMessage: error?.message,
+                    });
+    
+                    if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
+                        this.peer?.destroy();
+    
+                        this.initalizePeer();
+                    } else if (!this.peer?.sentCallConnection?.open) {
+                        this.connect();
+                    }
+                },
+                onConnectionsDisconnected: () => {
+                    if (this.machineStream) {
+                        this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
+                    }
+                },
+                onDestroy: () => {
+                    if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
+                        this.peer?.destroy();
+    
+                        this.initalizePeer();
+                    } else if (!this.peer?.sentCallConnection?.open) {
+                        this.connect();
+                    }
+                },
+            });
+        } else {
+            this.peer.setOtherPeerID(this.machinePeerID);
+        }
     }
 
     public submit(): void {
@@ -295,9 +298,34 @@ export class RootComponent implements OnInit, OnDestroy {
         });
     }
 
-    public handleRequiredInteraction(): void {
-        this.videoService.playAllVideos();
+    public handleRequiredInteraction(): Promise<void> {
+        const promises: Promise<any>[] = [];
+
+        const timeoutPromise = new Promise((resolve, reject) => {
+            const t = window.setTimeout(() => {
+                reject("Playing videos timed out");
+            }, 10 * 1000);
+
+            promises.push(this.videoService.playAllVideos().then(() => {
+                clearTimeout(t);
+
+                resolve();
+            }));
+        });
+
+        promises.push(timeoutPromise);
+
         this.videoService.handledRequiredInteraction = true;
+
+        return Promise.all(promises).then(() => {
+            // pass
+        }).catch(error => {
+            console.error(error);
+
+            if (error === "Playing videos timed out") {
+                this.peer?.requestCallConnection();
+            }
+        });
     }
 
     public connect(): void {
