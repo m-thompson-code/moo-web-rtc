@@ -13,6 +13,8 @@ import firebase from 'firebase/app';
 import 'firebase/auth';
 
 import { AuthService } from './auth.service';
+import { ControllerDataValue } from './peerjs.service';
+import { AngularFireDatabase } from '@angular/fire/database';
 // // import 'firebase/database';
 // import 'firebase/firestore';
 // // import 'firebase/storage';
@@ -33,6 +35,11 @@ export interface RawMachineData {
 
 export interface MachineData {
     peerID: string;
+    updatedAtDate: firebase.firestore.Timestamp;
+}
+
+export interface RawControllerData {
+    controllerDataValue: string;
     updatedAtDate: firebase.firestore.Timestamp;
 }
 
@@ -133,12 +140,14 @@ const CURRENT_PRIVATE_PLAYER_COL = 'private_current_player';
 
 const MACHINE_COL = 'machine';
 
+const CONTROLLER_COL = 'controller';
+
 @Injectable({
     providedIn: 'root'
 })
 export class FirebaseService {
 
-    constructor(private authService: AuthService, private firestore: AngularFirestore) { }
+    constructor(private authService: AuthService, private firestore: AngularFirestore, private database: AngularFireDatabase) { }
 
     public addUser(playerData: AddPlayerData): Promise<void> {
         const batch = firebase.firestore().batch();
@@ -429,6 +438,83 @@ export class FirebaseService {
             const machine: MachineData | undefined = this._rawDataToMachineData(doc);
 
             return machine;
+        }));
+    }
+
+    public setControllerData(controllerDataValue: ControllerDataValue): Promise<void> {
+        // return this.__firestore_setControllerData(controllerDataValue);
+        return this.__database_setControllerData(controllerDataValue);
+    }
+    private _rawDataToControllerData(data: any): ControllerDataValue | undefined {
+        // return this.__firestore__rawDataToControllerData(data);
+        return this.__database__rawDataToControllerData(data);
+    }
+
+    public getControllerData(): Observable<ControllerDataValue | undefined> {
+        // return this.__firestore_getControllerData();
+        return this.__database_getControllerData();
+    }
+    
+    private __firestore_setControllerData(controllerDataValue: ControllerDataValue): Promise<void> {
+        if (!this.authService.user) {
+            console.error("Unexpected missing auth user");
+            return Promise.resolve();
+        }
+
+        const controllerRef = firebase.firestore().collection(CONTROLLER_COL).doc('controller');
+
+        const timestampFieldValue: firebase.firestore.FieldValue = firebase.firestore.FieldValue.serverTimestamp();
+
+        const controllerData = {
+            controllerDataValue: controllerDataValue,
+            updatedAtTimestamp: timestampFieldValue,
+        };
+
+        return controllerRef.set(controllerData);
+    }
+
+    private __firestore__rawDataToControllerData(data: any): ControllerDataValue | undefined {
+        const controllerDataValue = data?.controllerDataValue;
+
+        return controllerDataValue;
+    }
+
+    private __firestore_getControllerData(): Observable<ControllerDataValue | undefined> {
+        return this.firestore.collection<RawControllerData>(CONTROLLER_COL).doc('controller').valueChanges().pipe(map(doc => {
+            const controllerDataValue: ControllerDataValue | undefined = this._rawDataToControllerData(doc);
+
+            return controllerDataValue;
+        }));
+    }
+
+    private __database_setControllerData(controllerDataValue: ControllerDataValue): Promise<void> {
+        if (!this.authService.user) {
+            console.error("Unexpected missing auth user");
+            return Promise.resolve();
+        }
+
+        const controllerRef = firebase.database().ref(`${CONTROLLER_COL}/controller`);
+
+        const serverValueTimestamp: Object = firebase.database.ServerValue.TIMESTAMP;
+
+        const controllerData = {
+            controllerDataValue: controllerDataValue,
+            updatedAtTimestamp: serverValueTimestamp,
+        };
+
+        return controllerRef.set(controllerData);
+    }
+    private __database__rawDataToControllerData(data: any): ControllerDataValue | undefined {
+        const controllerDataValue = data?.controllerDataValue;
+
+        return controllerDataValue;
+    }
+
+    private __database_getControllerData(): Observable<ControllerDataValue | undefined> {
+        return this.database.object(`${CONTROLLER_COL}/controller`).valueChanges().pipe(map(doc => {
+            const controllerDataValue: ControllerDataValue | undefined = this.__database__rawDataToControllerData(doc);
+
+            return controllerDataValue;
         }));
     }
 }

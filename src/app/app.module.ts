@@ -7,6 +7,7 @@ import { AngularFireModule } from '@angular/fire';
 import { AngularFireAnalyticsModule } from '@angular/fire/analytics';
 import { AngularFirestoreModule } from '@angular/fire/firestore';
 import { AngularFireAuthModule } from '@angular/fire/auth';
+import { AngularFireDatabaseModule } from '@angular/fire/database';
 
 import { environment } from '@environment';
 
@@ -26,6 +27,7 @@ import { AppComponent } from './app.component';
         AngularFireAuthModule,
         AngularFireAnalyticsModule,
         AngularFirestoreModule,
+        AngularFireDatabaseModule,
     ],
     providers: [],
     bootstrap: [AppComponent]

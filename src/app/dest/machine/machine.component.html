@@ -82,9 +82,13 @@
     Your MediaStream
 </div>
 
-<canvas #canvas width="300" height="150">
+<canvas #canvas width="500" height="250">
     Your browser does not support the HTML5 canvas tag.
 </canvas>
+
+<div>
+    <button (click)="resetBalls()">Reset balls</button><button (click)="toggleRed()">Toggle Red (peerjs)</button><button (click)="toggleBlue()">Toggle Blue (firebase)</button>
+</div>
 
 <div class="video-container">
     <video #video playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">

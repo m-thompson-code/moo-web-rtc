@@ -44,10 +44,17 @@ export class MachineComponent implements OnInit, OnDestroy {
         errorMessage?: string;
     }[] = [];
 
-    public ballX: number = 50;
-    public ballY: number = 50;
+    public ballX: number = 500/2;
+    public ballY: number = 250/2;
+
+    public ballX2: number = 500/2;
+    public ballY2: number = 250/2;
+
+    public showRed: boolean = true;
+    public showBlue: boolean = true;
 
     public controllerMovement: 'up' | 'down' | 'left' | 'right' | 'drop' | 'none' = 'none';
+    public controllerMovement2: 'up' | 'down' | 'left' | 'right' | 'drop' | 'none' = 'none';
 
     constructor(private fb: FormBuilder, private ngZone: NgZone, private peerjsService: PeerjsService, 
         private firebaseService: FirebaseService, public videoService: VideoService) { }
@@ -107,19 +114,19 @@ export class MachineComponent implements OnInit, OnDestroy {
     }
 
     private _getMediaStream(): Promise<MediaStream> {
-        // return Promise.resolve((this.canvas.nativeElement as any).captureStream() as MediaStream);
+        return Promise.resolve((this.canvas.nativeElement as any).captureStream() as MediaStream);
 
-        return new Promise((resolve, reject) => {
-            // this.ngZone.run(() => {});// Do I need this? I don't think I do since this isn't really a 'Promise' anymore due to angular converting Promises to ZoneAwarePromise
-            navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
+        // return new Promise((resolve, reject) => {
+        //     // this.ngZone.run(() => {});// Do I need this? I don't think I do since this isn't really a 'Promise' anymore due to angular converting Promises to ZoneAwarePromise
+        //     navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
         
-            // TODO: Bring back audio (just for testing)
-            navigator.getUserMedia({video: true, audio: false}, mediaStream => {
-                resolve(mediaStream);
-            }, error => {
-                reject(error);
-            });
-        });
+        //     // TODO: Bring back audio (just for testing)
+        //     navigator.getUserMedia({video: true, audio: false}, mediaStream => {
+        //         resolve(mediaStream);
+        //     }, error => {
+        //         reject(error);
+        //     });
+        // });
     }
 
     private initalizeCanvas(): void {
@@ -132,8 +139,11 @@ export class MachineComponent implements OnInit, OnDestroy {
                 throw new Error("Unexpected missing ctx");
             }
 
+            ctx.globalAlpha = 1;
             ctx.fillStyle = "white";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.font = "30px Arial";
 
             if (this.controllerMovement === 'up') {
                 this.ballY -= 1;
@@ -143,13 +153,51 @@ export class MachineComponent implements OnInit, OnDestroy {
                 this.ballX -= 1;
             } else if (this.controllerMovement === 'right') {
                 this.ballX += 1;
-            } else if (this.controllerMovement === 'drop') {
-                // TODO: handle this
             }
 
-            ctx.beginPath();
-            ctx.arc(this.ballX, this.ballY, 30, 0, 2 * Math.PI);
-            ctx.stroke();
+            if (this.showRed) {
+                ctx.globalAlpha = .6;
+
+                ctx.beginPath();
+                ctx.arc(this.ballX, this.ballY, 30, 0, 2 * Math.PI);
+                ctx.fillStyle = "red";
+                ctx.fill();
+                // ctx.stroke();
+
+                ctx.globalAlpha = .87;
+                ctx.fillStyle = "black";
+
+                if (this.controllerMovement === 'drop') {
+                    ctx.fillText("D", this.ballX - 10, this.ballY + 10);
+                }
+            }
+
+            if (this.controllerMovement2 === 'up') {
+                this.ballY2 -= 1;
+            } else if (this.controllerMovement2 === 'down') {
+                this.ballY2 += 1;
+            } else if (this.controllerMovement2 === 'left') {
+                this.ballX2 -= 1;
+            } else if (this.controllerMovement2 === 'right') {
+                this.ballX2 += 1;
+            }
+
+            if (this.showBlue) {
+                ctx.globalAlpha = .6;
+
+                ctx.beginPath();
+                ctx.arc(this.ballX2, this.ballY2, 30, 0, 2 * Math.PI);
+                ctx.fillStyle = "blue";
+                ctx.fill();
+                // ctx.stroke();
+
+                ctx.globalAlpha = .87;
+                ctx.fillStyle = "black";
+
+                if (this.controllerMovement2 === 'drop') {
+                    ctx.fillText("D", this.ballX2 - 10, this.ballY2 + 10);
+                }
+            }
 
             ctx.strokeRect(0, 0, canvas.width, canvas.height);
 
@@ -257,6 +305,22 @@ export class MachineComponent implements OnInit, OnDestroy {
                     this.controllerMovement = 'none';
                 }
             });
+
+            this._controllerSub.add(this.firebaseService.getControllerData().subscribe(controllerDataValue => {
+                if (controllerDataValue === 'up-pressed') {
+                    this.controllerMovement2 = 'up';
+                } else if (controllerDataValue === 'down-pressed') {
+                    this.controllerMovement2 = 'down';
+                } else if (controllerDataValue === 'left-pressed') {
+                    this.controllerMovement2 = 'left';
+                } else if (controllerDataValue === 'right-pressed') {
+                    this.controllerMovement2 = 'right';
+                } else if (controllerDataValue === 'drop-pressed') {
+                    this.controllerMovement2 = 'drop';
+                } else {
+                    this.controllerMovement2 = 'none';
+                }
+            }));
         } else {
             this.peerWrapper.setOtherPeerID(this.currentPlayerPeerID);
         }
@@ -313,6 +377,21 @@ export class MachineComponent implements OnInit, OnDestroy {
         localStorage.setItem('machine-peer-id', peerID);
 
         return peerID;
+    }
+
+    public resetBalls(): void {
+        this.ballX = 500/2;
+        this.ballY = 250/2;
+        this.ballX2 = 500/2;
+        this.ballY2 = 250/2;
+    }
+
+    public toggleRed(): void {
+        this.showRed = !this.showRed;
+    }
+
+    public toggleBlue(): void {
+        this.showBlue = !this.showBlue;
     }
 
     public ngOnDestroy(): void {

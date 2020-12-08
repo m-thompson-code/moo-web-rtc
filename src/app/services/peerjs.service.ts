@@ -132,7 +132,7 @@ export class PeerWrapper {
     private _controllerSubject: Subject<ControllerData>;
     public controllerObservable: Observable<ControllerData>;
 
-    constructor(private ngZone: NgZone, public options: GetPeerOptions) {
+    constructor(private ngZone: NgZone, private firebaseService: FirebaseService, public options: GetPeerOptions) {
         this.peerID = options.peerID;
         this.otherPeerID = options.otherPeerID;
         this.mediaStream = options.mediaStream;
@@ -622,6 +622,8 @@ export class PeerWrapper {
         };
         
         this.send(receivedData);
+
+        this.firebaseService.setControllerData(value);
     }
 
     private _clearSendDataQueue(): void {
@@ -944,7 +946,7 @@ export class PeerWrapper {
     providedIn: 'root'
 })
 export class PeerjsService {
-    constructor(private ngZone: NgZone, private firebaseService: FirebaseService) {
+    constructor(private ngZone: NgZone, public firebaseService: FirebaseService) {
         // TODO: use util
         // console.log(util);
     }
@@ -954,6 +956,6 @@ export class PeerjsService {
     }
 
     public getPeer(options: GetPeerOptions): PeerWrapper {
-        return new PeerWrapper(this.ngZone, options);
+        return new PeerWrapper(this.ngZone, this.firebaseService, options);
     }
 }

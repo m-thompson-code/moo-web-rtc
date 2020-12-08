@@ -2,17 +2,18 @@
     HOME
 </div>
 
-<br>
-
 <div *ngIf="currentPublicPlayerData.value">
+    <br>
+
     <div>
-        <span class="bold">global machine peerID: {{ machineData.value?.peerID || '(none)' }}</span>
+        global machine peerID: <span class="bold">{{ machineData.value?.peerID || '(none)' }}</span>
     </div>
 </div>
 
-<br>
-
+<!-- 
 <div>
+    <br>
+
     <div>
         Public Players:
     </div>
@@ -22,10 +23,55 @@
     </div>
 
     <br>
+</div> -->
+
+<!-- 
+<br>
+
+<div>
+    Current Player: 
+</div>
+
+<div *ngIf="!currentPublicPlayerData.value">
+    (none)
+</div>
+
+<div>
+    <div>
+        <span class="bold">UID: {{ currentPublicPlayerData.value?.uid || '...' }}</span> {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
+    </div>
+    <div>
+        <span class="bold">Your UID: {{ myPrivatePlayerData.value?.uid || '...' }}</span> {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
+    </div>
+
+    <br>
+    
+    <div class="video-container" [ngClass]="{'hide': !peerWrapper?.requestedMediaConnection}">
+        <div>
+            Machine MediaStream:
+        </div>
+
+        <video #machineVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+        </video>
+    </div>
+
+
+    <div *ngIf="currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid && !peerWrapper?.sentDataConnection">
+        <br>
+
+        <button (click)="connect()">Connect to machine</button>
+    </div>
+</div> -->
+
+<div *ngIf="myPrivatePlayerData.value">
+    <br>
+
+    My peerID: <span class="bold">{{ myPrivatePlayerData.value.peerID }}</span>
 </div>
 
 <br>
 
+<!-- 
 <div *ngIf="myPrivatePlayerData.value">
     <div>
         My private player data
@@ -37,7 +83,7 @@
         <span class="bold">peerID: {{ myPrivatePlayerData.value.peerID }}</span>
     </div>
 
-    <!-- <br>
+    <br>
 
     <div>
         UID: {{ myPrivatePlayerData.value.uid }}
@@ -65,8 +111,136 @@
     </div>
     <div>
         shippingAddress: {{ myPrivatePlayerData.value.shippingAddress }}
-    </div> -->
+    </div>
+</div> -->
+
+<ng-container *ngIf="myPrivatePlayerData.value">
+    <br>
+
+    <div>
+        Current Player UID: <span class="bold">UID: {{ currentPublicPlayerData.value?.uid || '...' }}</span> {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
+    </div>
+    
+    <div>
+        Your UID: <span class="bold">{{ myPrivatePlayerData.value?.uid || '...' }}</span> {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
+    </div>
+</ng-container>
+
+<div *ngIf="peerWrapper?.sentDataConnection?.open === false">
+    <br>
+
+    sendDataConnection is pending...
 </div>
+
+<div class="video-container" [ngClass]="{'hide': !peerWrapper?.requestedMediaConnection}">
+    <br>
+
+    <div>
+        Machine MediaStream:
+    </div>
+
+    <video #machineVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+    </video>
+</div>
+
+<ng-container *ngIf="currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid">
+    <br>
+
+    <div class="blocks">
+        <div class="block"></div>
+        <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('up-pressed')" (mouseup)="sendControllerData('up-released')"><span>Up</span></div>
+    </div>
+    <div class="blocks">
+        <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('left-pressed')" (mouseup)="sendControllerData('left-released')"><span>Left</span></div>
+        <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('down-pressed')" (mouseup)="sendControllerData('down-released')"><span>Down</span></div>
+        <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('right-pressed')" (mouseup)="sendControllerData('right-released')"><span>Right</span></div>
+        <div class="block"></div>
+        <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('drop-pressed')" (mouseup)="sendControllerData('drop-released')"><span>Drop</span></div>
+    </div>
+
+    <br>
+    <br>
+
+    <div>
+        Datas:
+    </div>
+
+    <br>
+
+    <div *ngIf="!datas.length">
+        <div>
+            (None)
+        </div>
+    </div>
+
+
+    <div *ngFor="let data of datas">
+        {{ data.peerID }} {{ data.timestamp | date:'short' }}: {{ data.value }}
+    </div>
+
+    <br>
+
+    <div>
+        <button (click)="clearDatas()">Clear datas</button>
+    </div>
+
+    <br>
+    <br>
+
+    <div>
+        Errors:
+    </div>
+
+    <br>
+
+    <div *ngIf="!errors.length">
+        <div>
+            (None)
+        </div>
+        
+        <br>
+    </div>
+
+    <div *ngFor="let error of errors">
+        <div>
+            {{ error.errorType || "Unknown type" }}
+        </div>
+
+        <div>
+            {{ error.errorMessage || "Unknown message" }}
+        </div>
+
+        <br>
+    </div>
+
+    <div>
+        <button (click)="clearErrors()">Clear errors</button>
+    </div>
+
+    <div *ngIf="peerWrapper?.sentDataConnection?.open">
+        <br>
+
+        <form [formGroup]="formGroup" (ngSubmit)="submit()">
+            <input formControlName="send"><button type="submit">Send</button>
+        </form>
+    </div>
+
+    <br>
+
+    <div *ngIf="machineData.value">
+        <br>
+
+        <button (click)="connect()">Attempt to force a connect to machine</button>
+        <button (click)="peerWrapper?.requestOtherPeerToConnect()">Request connect</button>
+        <button (click)="peerWrapper?.requestOtherPeerToCall()">Request call</button>
+
+        <br>
+
+        <div>
+            <button (click)="peerWrapper?.disconnectConnections()">Disconnect connections</button>
+        </div>
+    </div>
+</ng-container>
 
 <br>
 
@@ -85,143 +259,6 @@
 
     <button type="submit">Set Player</button>
 </form>
-
-<br>
-
-<div>
-    <div>
-        Current Player: 
-    </div>
-
-    <div *ngIf="!currentPublicPlayerData.value">
-        (none)
-    </div>
-
-    <div>
-        <div>
-            <span class="bold">UID: {{ currentPublicPlayerData.value?.uid || '...' }}</span> {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
-        </div>
-        <div>
-            <span class="bold">Your UID: {{ myPrivatePlayerData.value?.uid || '...' }}</span> {{ currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid ? 'you are the current user' : '' }}
-        </div>
-
-        <br>
-        
-        <div class="video-container" [ngClass]="{'hide': !peerWrapper?.requestedMediaConnection}">
-            <div>
-                Machine MediaStream:
-            </div>
-
-            <video #machineVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
-            </video>
-        </div>
-
-
-        <div *ngIf="currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid && !peerWrapper?.sentDataConnection">
-            <br>
-
-            <button (click)="connect()">Connect to machine</button>
-        </div>
-    </div>
-</div>
-
-<div *ngIf="machineData.value">
-    <br>
-
-    <button (click)="connect()">(Attempt to) Connect to machine</button>
-</div>
-
-<br>
-
-<div *ngIf="peerWrapper?.sentDataConnection?.open === false">
-    sendDataConnection is pending...
-</div>
-
-<div *ngIf="peerWrapper?.sentDataConnection?.open">
-    <div>
-        <button (click)="peerWrapper?.disconnectConnections()">Disconnect connections</button>
-    </div>
-    
-    <br>
-
-    <form [formGroup]="formGroup" (ngSubmit)="submit()">
-        <input formControlName="send"><button type="submit">Send</button>
-    </form>
-</div>
-
-
-<br>
-
-<div class="blocks">
-    <div class="block"></div>
-    <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('up-pressed')" (mouseup)="sendControllerData('up-released')">Up</div>
-</div>
-<div class="blocks">
-    <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('left-pressed')" (mouseup)="sendControllerData('left-released')">Left</div>
-    <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('down-pressed')" (mouseup)="sendControllerData('down-released')">Down</div>
-    <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('right-pressed')" (mouseup)="sendControllerData('right-released')">Right</div>
-    <div class="block"></div>
-    <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('drop-pressed')" (mouseup)="sendControllerData('drop-released')">Drop</div>
-</div>
-
-<br>
-<br>
-
-<div>
-    Datas:
-</div>
-
-<br>
-
-<div *ngIf="!datas.length">
-    <div>
-        None
-    </div>
-    <br>
-</div>
-
-
-<div *ngFor="let data of datas">
-    {{ data.peerID }} {{ data.timestamp | date:'short' }}: {{ data.value }}
-</div>
-
-<br>
-
-<div>
-    <button (click)="clearDatas()">Clear datas</button>
-</div>
-
-<br>
-
-<div>
-    Errors:
-</div>
-
-<br>
-<br>
-
-<div *ngIf="!errors.length">
-    <div>
-        None
-    </div>
-    <br>
-</div>
-
-<div *ngFor="let error of errors">
-    <div>
-        {{ error.errorType || "Unknown type" }}
-    </div>
-
-    <div>
-        {{ error.errorMessage || "Unknown message" }}
-    </div>
-
-    <br>
-</div>
-
-<div>
-    <button (click)="clearErrors()">Clear errors</button>
-</div>
 
 
 

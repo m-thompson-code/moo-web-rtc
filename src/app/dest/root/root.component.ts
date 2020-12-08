@@ -121,6 +121,8 @@ export class RootComponent implements OnInit, OnDestroy {
             } else {
                 this.initalizePeer();
             }
+
+            this.clearDatas();
         }));
 
         this._sub.add(this.firebaseService.getMachineData().subscribe(machine => {
@@ -333,6 +335,8 @@ export class RootComponent implements OnInit, OnDestroy {
                         debugger;
                         throw new Error("Unexpected missing peerWrapper");
                     }
+
+                    this.connect();
 
                     this.peerWrapper.requestOtherPeerToCall();
                 }, 3000);

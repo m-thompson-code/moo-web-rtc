@@ -55,6 +55,11 @@ video {
 
 .block-visible {
     border: 1px solid black;
+    cursor: pointer;
+
+    * {
+        pointer-events: none;
+    }
 }
 .block-visible:hover {
     background: gray;
