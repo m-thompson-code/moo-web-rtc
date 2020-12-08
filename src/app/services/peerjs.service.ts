@@ -1,4 +1,5 @@
 import { Injectable, NgZone } from '@angular/core';
+import { Observable, Subject } from 'rxjs';
 
 import firebase from 'firebase/app';
 
@@ -128,6 +129,9 @@ export class PeerWrapper {
 
     private _sendDataQueue: SendData[] = [];
 
+    private _controllerSubject: Subject<ControllerData>;
+    public controllerObservable: Observable<ControllerData>;
+
     constructor(private ngZone: NgZone, public options: GetPeerOptions) {
         this.peerID = options.peerID;
         this.otherPeerID = options.otherPeerID;
@@ -142,6 +146,9 @@ export class PeerWrapper {
         });
 
         this._initalizePeer();
+
+        this._controllerSubject = new Subject<ControllerData>();
+        this.controllerObservable = this._controllerSubject.asObservable();
     }
 
     /**
@@ -225,10 +232,10 @@ export class PeerWrapper {
                                 
                                 if (data.dataType === 'ping') {
                                     this._onPingData(data);
-                                }
-                                
-                                if (data.dataType === 'request-action') {
+                                } else if (data.dataType === 'request-action') {
                                     this._onRequestActionData(data);
+                                } else if (data.dataType === 'controller') {
+                                    this._onControllerData(data);
                                 }
                             });
                         });
@@ -509,6 +516,19 @@ export class PeerWrapper {
 
         this._startPingTimeout();
     }
+
+    private _emitControllerData(controllerData: ControllerData): void {
+        this._controllerSubject.next(controllerData);
+    }
+
+    private _onControllerData(controllerData: ControllerData): void {
+        if (!this.options.isCaller) {
+            console.warn("Unexpected received controllerData when not caller");
+            return;
+        }
+
+        this._emitControllerData(controllerData);
+    }
     
     private _pingCallConnection(): void {
         const receivedData: ReceiveData & PingData = {
@@ -591,6 +611,17 @@ export class PeerWrapper {
         } else {
             console.warn("Unexpected pingData", pingData);
         }
+    }
+
+    public sendControllerData(value: ControllerDataValue): void {
+        const receivedData: ReceiveData & ControllerData = {
+            peerID: this.peer.id,
+            value: value,
+            dataType: 'controller',
+            timestamp: Date.now(),
+        };
+        
+        this.send(receivedData);
     }
 
     private _clearSendDataQueue(): void {

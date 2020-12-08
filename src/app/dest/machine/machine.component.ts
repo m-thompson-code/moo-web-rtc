@@ -2,7 +2,7 @@ import { Component, ElementRef, NgZone, OnDestroy, OnInit, ViewChild } from '@an
 import { Subscription } from 'rxjs';
 
 import { FirebaseService, MachineData, PrivatePlayerData } from '@app/services/firebase.service';
-import { PeerjsService, PeerWrapper, ReceiveData } from '@app/services/peerjs.service';
+import { ControllerDataValue, PeerjsService, PeerWrapper, ReceiveData } from '@app/services/peerjs.service';
 import { VideoService } from '@app/services/video.service';
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 
@@ -12,11 +12,13 @@ import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
     styleUrls: ['./machine.component.scss']
 })
 export class MachineComponent implements OnInit, OnDestroy {
+    @ViewChild('canvas', {static: true}) private canvas!: ElementRef<HTMLCanvasElement>;
     @ViewChild('video', {static: true}) private video!: ElementRef<HTMLVideoElement>;
 
     public formGroup!: FormGroup;
 
     private _sub?: Subscription;
+    private _controllerSub?: Subscription;
 
     public peerID!: string;
     public currentPlayerPeerID?: string;
@@ -33,6 +35,7 @@ export class MachineComponent implements OnInit, OnDestroy {
     } = { value: undefined, isPending: true };
 
     public machineMediaStream?: MediaStream;
+    public canvasStream!: MediaStream;
 
     public datas: ReceiveData[] = [];
     
@@ -40,6 +43,11 @@ export class MachineComponent implements OnInit, OnDestroy {
         errorType?: string;
         errorMessage?: string;
     }[] = [];
+
+    public ballX: number = 50;
+    public ballY: number = 50;
+
+    public controllerMovement: 'up' | 'down' | 'left' | 'right' | 'drop' | 'none' = 'none';
 
     constructor(private fb: FormBuilder, private ngZone: NgZone, private peerjsService: PeerjsService, 
         private firebaseService: FirebaseService, public videoService: VideoService) { }
@@ -58,12 +66,12 @@ export class MachineComponent implements OnInit, OnDestroy {
             }),
         });
 
-        navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
-        
-        // TODO: Bring back audio (just for testing)
-        navigator.getUserMedia({video: true, audio: false}, mediaStream => {
+        this.initalizeCanvas();
+
+        this._getMediaStream().then(mediaStream => {
             this.machineMediaStream = mediaStream;
-            this.videoService.bindVideoStream(this.video.nativeElement, mediaStream);
+
+            this.videoService.bindVideoStream(this.video.nativeElement, this.machineMediaStream);
 
             this.initalizePeer();
 
@@ -96,6 +104,59 @@ export class MachineComponent implements OnInit, OnDestroy {
                 isPending: false,
             };
         }));
+    }
+
+    private _getMediaStream(): Promise<MediaStream> {
+        // return Promise.resolve((this.canvas.nativeElement as any).captureStream() as MediaStream);
+
+        return new Promise((resolve, reject) => {
+            // this.ngZone.run(() => {});// Do I need this? I don't think I do since this isn't really a 'Promise' anymore due to angular converting Promises to ZoneAwarePromise
+            navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
+        
+            // TODO: Bring back audio (just for testing)
+            navigator.getUserMedia({video: true, audio: false}, mediaStream => {
+                resolve(mediaStream);
+            }, error => {
+                reject(error);
+            });
+        });
+    }
+
+    private initalizeCanvas(): void {
+        const _drawLoop = () => {
+            const canvas = this.canvas.nativeElement;
+
+            const ctx = canvas.getContext("2d");
+
+            if (!ctx) {
+                throw new Error("Unexpected missing ctx");
+            }
+
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (this.controllerMovement === 'up') {
+                this.ballY -= 1;
+            } else if (this.controllerMovement === 'down') {
+                this.ballY += 1;
+            } else if (this.controllerMovement === 'left') {
+                this.ballX -= 1;
+            } else if (this.controllerMovement === 'right') {
+                this.ballX += 1;
+            } else if (this.controllerMovement === 'drop') {
+                // TODO: handle this
+            }
+
+            ctx.beginPath();
+            ctx.arc(this.ballX, this.ballY, 30, 0, 2 * Math.PI);
+            ctx.stroke();
+
+            ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+            window.requestAnimationFrame(_drawLoop);
+        }
+
+        window.requestAnimationFrame(_drawLoop);
     }
 
     public setMachinePeerID(): void {
@@ -177,6 +238,25 @@ export class MachineComponent implements OnInit, OnDestroy {
                 },
             });
 
+            this._controllerSub?.unsubscribe();
+
+            this._controllerSub = this.peerWrapper.controllerObservable.subscribe(controllerData => {
+                console.log('controllerData', controllerData);
+
+                if (controllerData.value === 'up-pressed') {
+                    this.controllerMovement = 'up';
+                } else if (controllerData.value === 'down-pressed') {
+                    this.controllerMovement = 'down';
+                } else if (controllerData.value === 'left-pressed') {
+                    this.controllerMovement = 'left';
+                } else if (controllerData.value === 'right-pressed') {
+                    this.controllerMovement = 'right';
+                } else if (controllerData.value === 'drop-pressed') {
+                    this.controllerMovement = 'drop';
+                } else {
+                    this.controllerMovement = 'none';
+                }
+            });
         } else {
             this.peerWrapper.setOtherPeerID(this.currentPlayerPeerID);
         }
@@ -239,5 +319,7 @@ export class MachineComponent implements OnInit, OnDestroy {
         this.peerWrapper?.destroy();
         
         this._sub?.unsubscribe();
+
+        this._controllerSub?.unsubscribe();
     }
 }

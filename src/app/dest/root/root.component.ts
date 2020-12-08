@@ -6,7 +6,7 @@ import firebase from 'firebase/app';
 
 import { AuthService } from '@app/services/auth.service';
 import { FirebaseService, MachineData, PrivatePlayerData, PublicPlayerData } from '@app/services/firebase.service';
-import { PeerjsService, PeerWrapper, ReceiveData } from '@app/services/peerjs.service';
+import { ControllerDataValue, PeerjsService, PeerWrapper, ReceiveData } from '@app/services/peerjs.service';
 import { VideoService } from '@app/services/video.service';
 
 import * as faker from 'faker';
@@ -365,6 +365,10 @@ export class RootComponent implements OnInit, OnDestroy {
 
     public clearErrors(): void {
         this.errors = [];
+    }
+
+    public sendControllerData(controllerData: ControllerDataValue): void {
+        this.peerWrapper?.sendControllerData(controllerData);
     }
 
     public ngOnDestroy(): void {

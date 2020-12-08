@@ -82,6 +82,10 @@
     Your MediaStream
 </div>
 
+<canvas #canvas width="300" height="150">
+    Your browser does not support the HTML5 canvas tag.
+</canvas>
+
 <div class="video-container">
     <video #video playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
     </video>

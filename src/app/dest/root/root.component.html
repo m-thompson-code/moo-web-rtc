@@ -151,6 +151,20 @@
 
 
 <br>
+
+<div class="blocks">
+    <div class="block"></div>
+    <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('up-pressed')" (mouseup)="sendControllerData('up-released')">Up</div>
+</div>
+<div class="blocks">
+    <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('left-pressed')" (mouseup)="sendControllerData('left-released')">Left</div>
+    <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('down-pressed')" (mouseup)="sendControllerData('down-released')">Down</div>
+    <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('right-pressed')" (mouseup)="sendControllerData('right-released')">Right</div>
+    <div class="block"></div>
+    <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('drop-pressed')" (mouseup)="sendControllerData('drop-released')">Drop</div>
+</div>
+
+<br>
 <br>
 
 <div>

@@ -35,3 +35,33 @@ video {
 // .hide-video {
 //     display: none;
 // }
+
+.blocks {
+    display: flex;
+}
+
+.block {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    width: 60px;
+    height: 60px;
+
+    margin: 1px;
+
+    box-sizing: border-box;
+}
+
+.block-visible {
+    border: 1px solid black;
+}
+.block-visible:hover {
+    background: gray;
+}
+.block-visible:focus {
+    background: darkgray;
+}
+.block-visible:active {
+    background: lightgray;
+}
