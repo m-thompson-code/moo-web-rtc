@@ -165,33 +165,7 @@ export class MachineComponent implements OnInit, OnDestroy {
 
             ctx.font = "30px Arial";
 
-            if (this.controllerMovement === 'up') {
-                this.ballY -= 1;
-            } else if (this.controllerMovement === 'down') {
-                this.ballY += 1;
-            } else if (this.controllerMovement === 'left') {
-                this.ballX -= 1;
-            } else if (this.controllerMovement === 'right') {
-                this.ballX += 1;
-            }
-
-            if (this.showRed) {
-                ctx.globalAlpha = .6;
-
-                ctx.beginPath();
-                ctx.arc(this.ballX, this.ballY, 30, 0, 2 * Math.PI);
-                ctx.fillStyle = "red";
-                ctx.fill();
-                // ctx.stroke();
-
-                ctx.globalAlpha = .87;
-                ctx.fillStyle = "black";
-
-                if (this.controllerMovement === 'drop') {
-                    ctx.fillText("D", this.ballX - 10, this.ballY + 10);
-                }
-            }
-
+            // firebase
             if (this.controllerMovement2 === 'up') {
                 this.ballY2 -= 1;
             } else if (this.controllerMovement2 === 'down') {
@@ -216,6 +190,34 @@ export class MachineComponent implements OnInit, OnDestroy {
 
                 if (this.controllerMovement2 === 'drop') {
                     ctx.fillText("D", this.ballX2 - 10, this.ballY2 + 10);
+                }
+            }
+
+            // peerjs
+            if (this.controllerMovement === 'up') {
+                this.ballY -= 1;
+            } else if (this.controllerMovement === 'down') {
+                this.ballY += 1;
+            } else if (this.controllerMovement === 'left') {
+                this.ballX -= 1;
+            } else if (this.controllerMovement === 'right') {
+                this.ballX += 1;
+            }
+
+            if (this.showRed) {
+                ctx.globalAlpha = .6;
+
+                ctx.beginPath();
+                ctx.arc(this.ballX, this.ballY, 30, 0, 2 * Math.PI);
+                ctx.fillStyle = "red";
+                ctx.fill();
+                // ctx.stroke();
+
+                ctx.globalAlpha = .87;
+                ctx.fillStyle = "black";
+
+                if (this.controllerMovement === 'drop') {
+                    ctx.fillText("D", this.ballX - 10, this.ballY + 10);
                 }
             }
 
