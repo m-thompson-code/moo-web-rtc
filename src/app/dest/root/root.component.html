@@ -148,14 +148,14 @@
 
     <div class="blocks">
         <div class="block"></div>
-        <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('up-pressed')" (mouseup)="sendControllerData('up-released')"><span>Up</span></div>
+        <div class="block block-visible" tabindex="0" (touchstart)="sendControllerData('up-pressed')" (mousedown)="sendControllerData('up-pressed')" (touchend)="sendControllerData('up-released')" (mouseup)="sendControllerData('up-released')"><span>Up</span></div>
     </div>
     <div class="blocks">
-        <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('left-pressed')" (mouseup)="sendControllerData('left-released')"><span>Left</span></div>
-        <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('down-pressed')" (mouseup)="sendControllerData('down-released')"><span>Down</span></div>
-        <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('right-pressed')" (mouseup)="sendControllerData('right-released')"><span>Right</span></div>
+        <div class="block block-visible" tabindex="0" (touchstart)="sendControllerData('left-pressed')" (mousedown)="sendControllerData('left-pressed')" (touchend)="sendControllerData('left-released')" (mouseup)="sendControllerData('left-released')"><span>Left</span></div>
+        <div class="block block-visible" tabindex="0" (touchstart)="sendControllerData('down-pressed')" (mousedown)="sendControllerData('down-pressed')" (touchend)="sendControllerData('down-released')" (mouseup)="sendControllerData('down-released')"><span>Down</span></div>
+        <div class="block block-visible" tabindex="0" (touchstart)="sendControllerData('right-pressed')" (mousedown)="sendControllerData('right-pressed')" (touchend)="sendControllerData('right-released')" (mouseup)="sendControllerData('right-released')"><span>Right</span></div>
         <div class="block"></div>
-        <div class="block block-visible" tabindex="0" (mousedown)="sendControllerData('drop-pressed')" (mouseup)="sendControllerData('drop-released')"><span>Drop</span></div>
+        <div class="block block-visible" tabindex="0" (touchstart)="sendControllerData('drop-pressed')" (mousedown)="sendControllerData('drop-pressed')" (touchend)="sendControllerData('drop-released')" (mouseup)="sendControllerData('drop-released')"><span>Drop</span></div>
     </div>
 
     <br>
