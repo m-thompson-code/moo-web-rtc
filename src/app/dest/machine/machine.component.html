@@ -113,6 +113,21 @@
 </div>
 
 <br>
+<br>
+
+<div>
+    Datas:
+</div>
+
+<br>
+
+<div *ngIf="!datas.length">
+    <div>
+        None
+    </div>
+    <br>
+</div>
+
 
 <div *ngFor="let data of datas">
     {{ data.peerID }} {{ data.timestamp | date:'short' }}: {{ data.value }}
@@ -127,26 +142,32 @@
 <br>
 
 <div>
+    Errors:
+</div>
+
+<br>
+<br>
+
+<div *ngIf="!errors.length">
     <div>
-        Errors:
+        None
+    </div>
+    <br>
+</div>
+
+<div *ngFor="let error of errors">
+    <div>
+        {{ error.errorType || "Unknown type" }}
+    </div>
+
+    <div>
+        {{ error.errorMessage || "Unknown message" }}
     </div>
 
     <br>
+</div>
 
-    <div *ngIf="!errors.length"> None <br></div>
-
-    <div *ngFor="let error of errors">
-        <div>
-            {{ error.errorType || "Unknown type" }}
-        </div>
-
-        <div>
-            {{ error.errorMessage || "Unknown message" }}
-        </div>
-
-        <br>
-    </div>
-
+<div>
     <button (click)="clearErrors()">Clear errors</button>
 </div>
 

@@ -322,8 +322,14 @@ export class RootComponent implements OnInit, OnDestroy {
         }).catch(error => {
             console.error(error);
 
+            debugger;
+
+            // TODO: update UI to show that a retry happened
+            
             if (error === "Playing videos timed out") {
-                this.peer?.requestCallConnection();
+                setTimeout(() => {
+                    this.peer?.requestCallConnection();
+                }, 3000);
             }
         });
     }

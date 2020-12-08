@@ -86,6 +86,8 @@ export class MachineComponent implements OnInit, OnDestroy {
             this.currentPlayerPeerID = this.currentPrivatePlayersData.value?.peerID;
 
             this.initalizePeer();
+
+            this.clearDatas();
         });
 
         this._sub.add(this.firebaseService.getMachineData().subscribe(machine => {
@@ -146,11 +148,11 @@ export class MachineComponent implements OnInit, OnDestroy {
 
                         this.initalizePeer();
                     } else {
-                        if (!this.peer?.sentCallConnection?.open) {
+                        if (!this.peer?.sentDataConnection?.open) {
                             this.connect();
                         }
 
-                        if (!this.peer?.callConfirmed) {
+                        if (!this.peer?.sentCallConnection?.open) {
                             this.call();
                         }
                     }
@@ -164,11 +166,11 @@ export class MachineComponent implements OnInit, OnDestroy {
 
                         this.initalizePeer();
                     } else {
-                        if (!this.peer?.sentCallConnection?.open) {
+                        if (!this.peer?.sentDataConnection?.open) {
                             this.connect();
                         }
 
-                        if (!this.peer?.callConfirmed) {
+                        if (!this.peer?.sentCallConnection?.open) {
                             this.call();
                         }
                     }
