@@ -374,6 +374,8 @@ export class PeerWrapper {
             this.sentDataConnection.close();
             this.sentDataConnection = undefined;
 
+            this._resetPingStatus();
+
             this._clearSendDataQueue();
         }
 
@@ -490,9 +492,9 @@ export class PeerWrapper {
     }
 
     private _pingDataConnection(): void {
-        if (!this._otherPeerIsPingReady) {
-            throw new Error("Unexpected other peer is not ping ready");
-        }
+        // if (!this._otherPeerIsPingReady) {
+        //     throw new Error("Unexpected other peer is not ping ready");
+        // }
 
         const receivedData: ReceiveData & PingData = {
             peerID: this.peer.id,
@@ -551,7 +553,7 @@ export class PeerWrapper {
     
     private _onPingData(pingData: PingData): void {
         if (pingData.value === 'ping-ready') {
-            this._otherPeerIsPingReady = true;
+            // this._otherPeerIsPingReady = true;
 
             if (!this.sentDataConnection || !this.sentDataConnection?.open) {
                 this.connect();
