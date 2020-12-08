@@ -188,6 +188,7 @@ export class PeerWrapper {
                 if (conn.peer !== this.otherPeerID) {
                     console.warn("Unexpected connection was from a peer that was not a peer with otherPeerID");
                     conn.close();
+                    return;
                 }
 
                 if (this.requestedDataConnection) {
@@ -201,6 +202,7 @@ export class PeerWrapper {
                     this.ngZone.run(() => {
                         // Reject connections that aren't from the expected peer with otherPeerID
                         if (conn.peer !== this.otherPeerID) {
+                            console.warn("Unexpected connection open was from a peer that was not a peer with otherPeerID");
                             conn.close();
                             return;
                         }
@@ -214,8 +216,6 @@ export class PeerWrapper {
                         conn.on('data', (data: ReceiveData) => {
                             this.ngZone.run(() => {
                                 console.log("peer > requestedDataConnection - data", data, conn.peer);
-
-                                console.log(conn.peer);
 
                                 if (conn.peer !== data.peerID) {
                                     console.warn("Unexpected mismatch peerID from data and DataConnection");
@@ -309,7 +309,7 @@ export class PeerWrapper {
                         console.log("peer > requestedMediaConnection - close", mediaConnection.peer);
 
                         if (this.requestedMediaConnection === mediaConnection) {
-                            this.sentDataConnection = undefined;
+                            this.requestedMediaConnection = undefined;
 
                             this.options.onCallConnectionClosed?.();
                         }
@@ -669,7 +669,9 @@ export class PeerWrapper {
 
         this.sentMediaConnection = mediaConnection;
 
-        if (this.sentMediaConnection?.open) {
+        if (mediaConnection?.open) {
+            console.warn("Testing if this is open");
+            debugger;
             this._pingCallConnection();
         }
 

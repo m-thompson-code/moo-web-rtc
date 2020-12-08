@@ -23,7 +23,15 @@ export class VideoService {
         const promises: Promise<any>[] = [];
 
         this.videosToPlay.forEach(video => {
-            promises.push(this.playVideo(video));
+            // console.log("video metadata", video.parentNode, video.src, video.srcObject);
+
+            if (!video.parentNode) {
+                console.warn("video no longer on dom, skipping", video.parentNode);
+            } else if (!video.src && !video.srcObject) {
+                console.warn("video has no src/srcObject, skipping");
+            } else {
+                promises.push(this.playVideo(video));
+            }
         });
 
         this.videosToPlay = [];
@@ -36,7 +44,14 @@ export class VideoService {
     }
 
     public playVideo(video: HTMLVideoElement, attempt: number = 0): Promise<void> {
-        const RETRY_LIMIT = 5;
+        let RETRY_LIMIT = 5;
+
+        // Turns out the retry logic messes up the MediaStream anyway, so requesting a fresh call right away is likely better
+        // Assumption that we are only supporting browsers that support srcObject
+        if (video.srcObject) {
+            // This idea of setting RETRY_LIMIT to 0 works, at least for Desktop/Safari
+            RETRY_LIMIT = 0;
+        }
 
         try {
             // source: https://developers.google.com/web/updates/2017/06/play-request-was-interrupted

@@ -318,6 +318,7 @@ export class RootComponent implements OnInit, OnDestroy {
         this.videoService.handledRequiredInteraction = true;
 
         return Promise.all(promises).then(() => {
+            console.log("handleRequiredInteraction finished");
             // pass
         }).catch(error => {
             console.error(error);
@@ -328,7 +329,12 @@ export class RootComponent implements OnInit, OnDestroy {
             
             if (error === "Playing videos timed out") {
                 setTimeout(() => {
-                    this.peerWrapper?.requestOtherPeerToCall();
+                    if (!this.peerWrapper) {
+                        debugger;
+                        throw new Error("Unexpected missing peerWrapper");
+                    }
+
+                    this.peerWrapper.requestOtherPeerToCall();
                 }, 3000);
             }
         });
