@@ -12,7 +12,7 @@ const REMOTE_SERVER_HOST = 'moo-web-rtc-server.uc.r.appspot.com';
 export class PingError extends Error {
     public __pingError: boolean = true;
     constructor(...params: any) {
-      super(...params);
+        super(...params);
     }
 };
 
@@ -121,9 +121,7 @@ export class PeerWrapper {
     public receivedDataPing: boolean = false;
     public completedDataPing: boolean = false;
 
-    public sentCall: boolean = false;
-    public receivedCall: boolean = false;
-    public callConfirmed: boolean = false;
+    private _sendDataQueue: SendData[] = [];
 
     constructor(private ngZone: NgZone, public options: GetPeerOptions) {
         this.peerID = options.peerID;
@@ -149,7 +147,11 @@ export class PeerWrapper {
         this.connect();
 
         // Call asap if we are the caller
-        if (this.options.isCaller && this.mediaStream) {
+        if (this.options.isCaller) {
+            if (!this.mediaStream) {
+                throw new Error("Unexpected missing mediaStream");
+            }
+
             this.call(this.mediaStream);
         }
     }
@@ -200,7 +202,17 @@ export class PeerWrapper {
             
                 conn.on('open', () => {
                     this.ngZone.run(() => {
-                        console.log("peer > requestedDataConnection open (we will reserve data from this peer now) - open", conn.peer);
+                        // Reject connections that aren't from the expected peer with otherPeerID
+                        if (conn.peer !== this.otherPeerID) {
+                            conn.close();
+                            return;
+                        }
+
+                        if (!this.sentDataConnection) {
+                            this.connect();
+                        }
+
+                        console.log("peer > requestedDataConnection open (we will handle data from this peer now) - open", conn.peer);
 
                         this.peerState = 'connected';
                 
@@ -232,7 +244,15 @@ export class PeerWrapper {
                     this.ngZone.run(() => {
                         console.log("peer > requestedDataConnection - close", conn.peer);
 
-                        // this.disconnectConnections();
+                        if (this.sentDataConnection === conn) {
+                            this.sentDataConnection = undefined;
+                        }
+
+                        if (this.sentCallConnection) {
+                            if (this.sentCallConnection.peer === conn.peer) {
+                                this.sentCallConnection.close();
+                            }
+                        }
                     });
                 });
                 
@@ -242,8 +262,6 @@ export class PeerWrapper {
                         console.log("peer > conn - error", conn.peer);
 
                         console.warn("testing if connections when error are 'open'", conn.open, conn.peer);
-
-                        // TODO: handle error better and perform retries
 
                         this._handleError(error, conn);
                     });
@@ -285,9 +303,9 @@ export class PeerWrapper {
                             throw new Error("Unexpected missing onCall");
                         }
 
-                        this.receivedCall = true;
-                        
-                        if (this.sentCallConnection?.open) {
+                        console.log('mediaConnection.open', mediaConnection.open);
+
+                        if (mediaConnection.open) {
                             this.emitCallReceived();
                         }
 
@@ -298,12 +316,12 @@ export class PeerWrapper {
                 mediaConnection.on('close', () => {
                     this.ngZone.run(() => {
                         console.log("peer > requestedCallConnection - close", mediaConnection.peer);
-        
-                        // this.disconnectConnections();
 
-                        // TODO: handle error better and perform retries
+                        if (this.requestedCallConnection === mediaConnection) {
+                            this.sentDataConnection = undefined;
 
-                        this.options.onCallConnectionClosed?.();
+                            this.options.onCallConnectionClosed?.();
+                        }
                     });
                 });
 
@@ -313,8 +331,6 @@ export class PeerWrapper {
                         console.log('peer > requestedCallConnection - error', mediaConnection.peer);
 
                         console.warn("testing if connections when error are 'open'", mediaConnection.open, mediaConnection.peer);
-
-                        // TODO: handle error better and perform retries
 
                         this._handleError(error, mediaConnection);
                     });
@@ -330,6 +346,7 @@ export class PeerWrapper {
             });
         });
            
+        // We don't use Peer.disconnect, so it is likely any disconnect is due to some kind of networking issue, let's default to reconnecting
         this.peer.on('disconnected', () => {
             this.ngZone.run(() => {
                 console.log('peer - disconnected');
@@ -366,6 +383,9 @@ export class PeerWrapper {
         // Close any other sentDataConnections that may exist
         if (this.sentDataConnection) {
             this.sentDataConnection.close();
+            this.sentDataConnection = undefined;
+
+            this._clearSendDataQueue();
         }
 
         const conn = this.peer.connect(this.otherPeerID, {
@@ -376,25 +396,11 @@ export class PeerWrapper {
 
         conn.on('open', () => {
             this.ngZone.run(() => {
-                console.log("peer > sentDataConnection - open", conn.peer);
+                console.log("peer > sentDataConnection - open", conn);
 
                 this.emitPingReady();
 
-                if (this.receivedDataPing) {
-                    this.respondToDataPing();
-                }
-
-                if (this.otherPeerIsPingReady) {
-                    this.pingDataConnection();
-                }
-
-                if (this.sentCall) {
-                    this.pingCallConnection();
-                }
-
-                if (this.receivedCall) {
-                    this.emitCallReceived();
-                }
+                this._reduceSendDataQueue();
             });
         });
 
@@ -402,7 +408,9 @@ export class PeerWrapper {
             this.ngZone.run(() => {
                 console.log("peer > sentDataConnection - close");
 
-                // this.disconnectConnections();
+                if (this.sentDataConnection === conn) {
+                    this.sentDataConnection = undefined;
+                }
             });
         });
         
@@ -421,10 +429,6 @@ export class PeerWrapper {
     }
     
     public requestDataConnection(): void {
-        if (!this.sentDataConnection) {
-            throw new Error("Unexpected missing sentDataConnection. This is required to send ping data to the other peer (1)");
-        }
-
         const receivedData: ReceiveData & RequestActionData = {
             peerID: this.peer.id,
             value: 'connect-me',
@@ -436,10 +440,6 @@ export class PeerWrapper {
     }
         
     public requestCallConnection(): void {
-        if (!this.sentDataConnection) {
-            throw new Error("Unexpected missing sentDataConnection. This is required to send ping data to the other peer (2)");
-        }
-
         const receivedData: ReceiveData & RequestActionData = {
             peerID: this.peer.id,
             value: 'call-me',
@@ -455,16 +455,20 @@ export class PeerWrapper {
 
         if (requestActionData.value === 'connect-me') {
             this.connect();
+
+            this.pingDataConnection();
         } else if (requestActionData.value === 'call-me') {
             if (!this.mediaStream) {
                 throw new Error("Unexpected missing mediaStream");
             }
 
-            if (this.sentCallConnection?.open) {
+            if (!this.sentCallConnection?.open) {
                 this.connect();
             }
 
             this.call(this.mediaStream);
+
+            this.pingCallConnection();
         } else {
             console.warn("Unexpected requestActionData", requestActionData);
         }
@@ -475,10 +479,6 @@ export class PeerWrapper {
         this.sentDataPing = false;
         this.receivedDataPing = false;
         this.completedDataPing = false;
-
-        this.sentCall = false;
-        this.receivedCall = false;
-        this.callConfirmed = false;
     }
     
     public emitPingReady(): void {
@@ -496,11 +496,6 @@ export class PeerWrapper {
         this.clearPing();
 
         this._pingTimeout = window.setTimeout(() => {
-            if (!this.sentDataConnection) {
-                console.error("Unexpected missing sentDataConnection for ping timeout");
-                return;
-            }
-
             this._handleError(new PingError("Ping timeout"), this.sentDataConnection);
         }, 10 * 1000);
     }
@@ -508,10 +503,6 @@ export class PeerWrapper {
     public pingDataConnection(): void {
         if (!this.otherPeerIsPingReady) {
             throw new Error("Unexpected other peer is not ping ready");
-        }
-
-        if (!this.sentDataConnection) {
-            throw new Error("Unexpected missing sentDataConnection. This is required to send ping data to the other peer (0)");
         }
 
         const receivedData: ReceiveData & PingData = {
@@ -529,10 +520,6 @@ export class PeerWrapper {
     }
     
     public pingCallConnection(): void {
-        if (!this.sentDataConnection) {
-            throw new Error("Unexpected missing sentDataConnection. This is required to send ping data to the other peer (0)");
-        }
-
         const receivedData: ReceiveData & PingData = {
             peerID: this.peer.id,
             value: 'send-ping-call-connection',
@@ -542,16 +529,10 @@ export class PeerWrapper {
         
         this.send(receivedData);
 
-        this.sentCall = true;
-
         this._startPingTimeout();
     }
     
     public respondToDataPing(): void {
-        if (!this.sentDataConnection) {
-            throw new Error("Unexpected missing sentDataConnection. This is required to send ping data to the other peer (1)");
-        }
-
         const receivedData: ReceiveData & PingData = {
             peerID: this.peer.id,
             value: 'received-ping-data-connection',
@@ -564,9 +545,6 @@ export class PeerWrapper {
     
     public emitCallReceived(): void {
         console.log("emitCallReceived");
-        if (!this.sentDataConnection) {
-            throw new Error("Unexpected missing sentDataConnection. This is required to send ping data to the other peer (1)");
-        }
 
         const receivedData: ReceiveData & PingData = {
             peerID: this.peer.id,
@@ -586,17 +564,15 @@ export class PeerWrapper {
         if (pingData.value === 'ping-ready') {
             this.otherPeerIsPingReady = true;
 
-            if (this.sentDataConnection?.open) {
-                this.pingDataConnection();
-            } else {
+            if (!this.sentDataConnection || !this.sentDataConnection?.open) {
                 this.connect();
             }
+
+            this.pingDataConnection();
         } else if (pingData.value === 'send-ping-data-connection') {
             this.receivedDataPing = true;
 
-            if (this.sentDataConnection?.open) {
-                this.respondToDataPing();
-            }
+            this.respondToDataPing();
         } else if (pingData.value === 'received-ping-data-connection') {
             this.completedDataPing = true;
 
@@ -606,7 +582,7 @@ export class PeerWrapper {
                 return;
             }
             
-            if (!this.sentCall) {
+            if (!this.sentCallConnection || !this.sentCallConnection?.open) {
                 if (!this.mediaStream) {
                     throw new Error("Unexpected missing mediaStream");
                 }
@@ -616,25 +592,48 @@ export class PeerWrapper {
 
             this.pingCallConnection();
         } else if (pingData.value === 'send-ping-call-connection') {
-            if (this.receivedCall) {
-                if (this.sentDataConnection?.open) {
-                    this.emitCallReceived();
-                }
-            } else {
-                this.requestCallConnection();
+            if (this.requestedCallConnection?.open) {
+                this.emitCallReceived();
             }
         } else if (pingData.value === 'received-ping-call-connection') {
-            this.callConfirmed = true;
-
             this.clearPing();
         } else {
             console.warn("Unexpected pingData", pingData);
         }
     }
 
+    private _clearSendDataQueue(): void {
+        this._sendDataQueue = [];
+    }
+
+    private _reduceSendDataQueue(): void {
+        if (!this.sentDataConnection || !this.sentDataConnection.open) {
+            throw new Error("Unexpected missing or closed sendDataConnection");
+        }
+
+        for (const data of this._sendDataQueue) {
+            this.send(data);
+        }
+    }
+
     public send(data: SendData): void {
-        if (!this.sentDataConnection) {
-            throw new Error("Unexpected missing sentDataConnection. This is required to send data to the other peer");
+        if (!this.sentDataConnection || !this.sentDataConnection?.open) {
+            if (!this.sentDataConnection) {
+                console.log("adding data to queue since sendDataConnection has not started yet", data);
+
+                this.connect();
+            } else {
+                console.log("adding data to queue since sendDataConnection is not open yet", data);
+            }
+
+            console.log("adding data to queue since sendDataConnection has not started yet", data);
+            this._sendDataQueue.unshift(data);
+
+            if (this._sendDataQueue.length > 100) {
+                throw new Error("Unexpected queue got too big");
+            }
+
+            return;
         }
             
         // TODO: validate dataType
@@ -652,8 +651,6 @@ export class PeerWrapper {
     }
 
     public call(mediaStream: MediaStream): Peer.MediaConnection {
-        console.log("call", mediaStream);
-        
         this.mediaStream = mediaStream || this.mediaStream;
 
         if (!this.options.isCaller) {
@@ -669,61 +666,48 @@ export class PeerWrapper {
             this.sentCallConnection = undefined;
         }
 
-        const conn = this.peer.call(this.otherPeerID, this.mediaStream);
+        const mediaConnection = this.peer.call(this.otherPeerID, this.mediaStream);
 
         // Reject calling if peer is not the caller
         // Also avoid calls from any peer that doesn't have the otherPeerID
-        if (!this.options.isCaller || conn.peer !== this.otherPeerID) {
-            conn.close();
+        if (!this.options.isCaller || mediaConnection.peer !== this.otherPeerID) {
+            mediaConnection.close();
 
             throw new Error("Unexpected call from a peer that is not the caller");
         }
 
-        this.sentCallConnection = conn;
-
-        this.sentCall = true;
+        this.sentCallConnection = mediaConnection;
 
         if (this.sentCallConnection?.open) {
             this.pingCallConnection();
         }
 
-        conn.on('open', () => {
-            this.ngZone.run(() => {
-                console.log("peer > sentCallConnection - open", conn.peer);
-            });
-        });
-
-        conn.on('close', () => {
+        mediaConnection.on('close', () => {
             this.ngZone.run(() => {
                 console.log("peer > sentCallConnection - close");
 
-                // // TODO: properly handle if this call has closed
-                // // Handle if we should retry or just let it go
-
-                // this.disconnectConnections();
-
-                // // TODO: handle error better and perform retries
+                if (this.sentCallConnection === mediaConnection) {
+                    this.sentCallConnection = undefined;
+                }
 
                 this.options.onCallConnectionClosed?.();
             });
         });
 
         // Would type this as any, but if they ever update their types, having any would override it
-        conn.on('error', (error) => {
+        mediaConnection.on('error', (error) => {
             this.ngZone.run(() => {
                 console.log('peer > sentCallConnection - error');
 
-                console.warn("testing if connections when error are 'open'", conn.open);
+                console.warn("testing if connections when error are 'open'", mediaConnection.open);
 
-                // TODO: handle error better and perform retries
-
-                this._handleError(error, conn);
+                this._handleError(error, mediaConnection);
             });
         });
 
-        console.log('call made', this.peer, conn, mediaStream);
+        console.log('call made', this.peer, mediaConnection, mediaStream);
 
-        return conn;
+        return mediaConnection;
     }
 
     /**
@@ -743,6 +727,8 @@ export class PeerWrapper {
      * Used to disconnect all connections. We use this whenever any connection has been closed or if peer is destroyed
      */
     public disconnectConnections(): void {
+        this._clearSendDataQueue();
+
         let emitDisconnectionHappened = false;
 
         this.resetPingStatus();
@@ -812,7 +798,7 @@ export class PeerWrapper {
         }
     }
     
-    private _handleError(error: any, connOrPeer: Peer | Peer.DataConnection | Peer.MediaConnection): void {
+    private _handleError(error: any, connOrPeer?: Peer | Peer.DataConnection | Peer.MediaConnection): void {
         let destroyPeer = false;
         let disconnectConnections = false;
 
@@ -902,7 +888,11 @@ export class PeerWrapper {
             console.error('__pingError', error);
             disconnectConnections = false;
             this.requestDataConnection();
-            this.pingCallConnection();
+
+            if (!this.options.isCaller) {
+                this.requestCallConnection();
+                // this.pingCallConnection();
+            }
         } else {
             console.error(error);
         }
@@ -913,9 +903,14 @@ export class PeerWrapper {
             console.warn(onError);
         }
 
+        // Exit early if no connOrPeer passed
+        if (!connOrPeer) {
+            return;
+        }
+
         const peer = connOrPeer as Peer;
 
-        if (peer.destroyed === true) {
+        if (destroyPeer || peer.destroyed === true) {
             console.error('peer was destroyed as a result of this error, cleaning up connections and peer object');
 
             this.destroy();
@@ -939,7 +934,7 @@ export class PeerWrapper {
 export class PeerjsService {
     constructor(private ngZone: NgZone, private firebaseService: FirebaseService) {
         // TODO: use util
-        console.log(util);
+        // console.log(util);
     }
 
     public getRandomPeerID(): string {
