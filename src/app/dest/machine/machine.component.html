@@ -17,9 +17,6 @@
         <div>
             global machine peerID: <span class="bold">{{ machineData.value.peerID }}</span> {{ peerID === machineData.value?.peerID ? 'you are the global machine' : '' }}
         </div>
-
-        <br>
-
         <div>
             My (machine) peerID: <span class="bold">{{ peerID }}</span> {{ peerID === machineData.value?.peerID ? 'you are the global machine' : '' }}<br>
             <button (click)="setMachinePeerID()">Update Machine to my (machine) peerID</button>
@@ -29,62 +26,70 @@
 
 <br>
 
+<div> Current Private Player peerID: <span class="bold"> {{ currentPrivatePlayersData.value?.peerID }}</span>
+<!-- 
+<br>
+
 <div>
+    Current Private Player: 
+</div>
+
+<br>
+
+<div *ngIf="!currentPrivatePlayersData.value">
+    (none)
+</div>
+
+<div *ngIf="currentPrivatePlayersData.value">
     <div>
-        Current Private Player: 
+        <span class="bold">peerID: {{ currentPrivatePlayersData.value.peerID }}</span>
     </div>
 
     <br>
 
-    <div *ngIf="!currentPrivatePlayersData.value">
-        (none)
+    <div>
+        UID: {{ currentPrivatePlayersData.value.uid }}
+    </div>
+    <div>
+        Username: {{ currentPrivatePlayersData.value.username }}
+    </div>
+    <div>
+        Active: {{ !!currentPrivatePlayersData.value.active }}
     </div>
 
-    <div *ngIf="currentPrivatePlayersData.value">
-        <div>
-            <span class="bold">peerID: {{ currentPrivatePlayersData.value.peerID }}</span>
-        </div>
-<!-- 
-        <br>
-
-        <div>
-            UID: {{ currentPrivatePlayersData.value.uid }}
-        </div>
-        <div>
-            Username: {{ currentPrivatePlayersData.value.username }}
-        </div>
-        <div>
-            Active: {{ !!currentPrivatePlayersData.value.active }}
-        </div>
-    
-        <div>
-            Created At: {{ currentPrivatePlayersData.value.createdAtDate | date:'short' }}
-        </div>
-        <div>
-            Updated At: {{ currentPrivatePlayersData.value.updatedAtDate | date:'short' }}
-        </div>
-
-        <div>
-            phoneNumber: {{ currentPrivatePlayersData.value.phoneNumber }}
-        </div>
-        <div>
-            emailAddress: {{ currentPrivatePlayersData.value.emailAddress }}
-        </div>
-        <div>
-            shippingAddress: {{ currentPrivatePlayersData.value.shippingAddress }}
-        </div> -->
+    <div>
+        Created At: {{ currentPrivatePlayersData.value.createdAtDate | date:'short' }}
     </div>
+    <div>
+        Updated At: {{ currentPrivatePlayersData.value.updatedAtDate | date:'short' }}
+    </div>
+
+    <div>
+        phoneNumber: {{ currentPrivatePlayersData.value.phoneNumber }}
+    </div>
+    <div>
+        emailAddress: {{ currentPrivatePlayersData.value.emailAddress }}
+    </div>
+    <div>
+        shippingAddress: {{ currentPrivatePlayersData.value.shippingAddress }}
+    </div>
+</div> -->
+
+<br>
+
+<div>
+    Your canvas
 </div>
+
+<canvas #canvas width="500" height="250">
+    Your browser does not support the HTML5 canvas tag.
+</canvas>
 
 <br>
 
 <div>
     Your MediaStream
 </div>
-
-<canvas #canvas width="500" height="250">
-    Your browser does not support the HTML5 canvas tag.
-</canvas>
 
 <div>
     <button (click)="resetBalls()">Reset balls</button><button (click)="toggleRed()">Toggle Red (peerjs)</button><button (click)="toggleBlue()">Toggle Blue (firebase)</button>
@@ -93,6 +98,9 @@
 <div class="video-container">
     <video #video playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
     </video>
+</div>
+<div>
+    <button (click)="setStream('canvas')">Canvas</button> | <button (click)="setStream('camera')">Camera</button>
 </div>
 
 <div *ngIf="currentPrivatePlayersData.value">
@@ -147,6 +155,7 @@
     <button (click)="clearDatas()">Clear datas</button>
 </div>
 
+<br>
 <br>
 
 <div>

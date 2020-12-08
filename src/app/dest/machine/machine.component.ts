@@ -56,6 +56,8 @@ export class MachineComponent implements OnInit, OnDestroy {
     public controllerMovement: 'up' | 'down' | 'left' | 'right' | 'drop' | 'none' = 'none';
     public controllerMovement2: 'up' | 'down' | 'left' | 'right' | 'drop' | 'none' = 'none';
 
+    public mediaStreamMode: 'canvas' | 'camera' = 'canvas';
+
     constructor(private fb: FormBuilder, private ngZone: NgZone, private peerjsService: PeerjsService, 
         private firebaseService: FirebaseService, public videoService: VideoService) { }
 
@@ -113,20 +115,38 @@ export class MachineComponent implements OnInit, OnDestroy {
         }));
     }
 
-    private _getMediaStream(): Promise<MediaStream> {
-        return Promise.resolve((this.canvas.nativeElement as any).captureStream() as MediaStream);
+    public setStream(mode: 'canvas' | 'camera'): void {
+        if (this.mediaStreamMode !== mode) {
+            this.mediaStreamMode = mode;
 
-        // return new Promise((resolve, reject) => {
-        //     // this.ngZone.run(() => {});// Do I need this? I don't think I do since this isn't really a 'Promise' anymore due to angular converting Promises to ZoneAwarePromise
-        //     navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
+            this._getMediaStream().then(mediaStream => {
+                this.machineMediaStream = mediaStream;
+
+                this.videoService.bindVideoStream(this.video.nativeElement, this.machineMediaStream);
+
+                this.initalizePeer();
+
+                this.peerWrapper?.call(mediaStream);
+            });
+        }
+    }
+
+    private _getMediaStream(): Promise<MediaStream> {
+        if (this.mediaStreamMode === 'canvas') {
+            return Promise.resolve((this.canvas.nativeElement as any).captureStream() as MediaStream);
+        }
+
+        return new Promise((resolve, reject) => {
+            // this.ngZone.run(() => {});// Do I need this? I don't think I do since this isn't really a 'Promise' anymore due to angular converting Promises to ZoneAwarePromise
+            navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
         
-        //     // TODO: Bring back audio (just for testing)
-        //     navigator.getUserMedia({video: true, audio: false}, mediaStream => {
-        //         resolve(mediaStream);
-        //     }, error => {
-        //         reject(error);
-        //     });
-        // });
+            // TODO: Bring back audio (just for testing)
+            navigator.getUserMedia({video: true, audio: false}, mediaStream => {
+                resolve(mediaStream);
+            }, error => {
+                reject(error);
+            });
+        });
     }
 
     private initalizeCanvas(): void {
