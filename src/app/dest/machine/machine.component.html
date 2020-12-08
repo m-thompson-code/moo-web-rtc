@@ -96,13 +96,13 @@
 
 <br>
 
-<div *ngIf="peer?.sentDataConnection?.open === false">
+<div *ngIf="peerWrapper?.sentDataConnection?.open === false">
     sendDataConnection is pending...
 </div>
 
-<div *ngIf="peer?.sentDataConnection?.open">
+<div *ngIf="peerWrapper?.sentDataConnection?.open">
     <div>
-        <button (click)="peer?.disconnectConnections()">Disconnect connections</button>
+        <button (click)="peerWrapper?.disconnectConnections()">Disconnect connections</button>
     </div>
     
     <br>

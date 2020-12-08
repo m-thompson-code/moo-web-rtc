@@ -20,7 +20,7 @@ export class MachineComponent implements OnInit, OnDestroy {
 
     public peerID!: string;
     public currentPlayerPeerID?: string;
-    public peer?: PeerWrapper;
+    public peerWrapper?: PeerWrapper;
 
     public currentPrivatePlayersData: {
         value: PrivatePlayerData | undefined;
@@ -124,12 +124,12 @@ export class MachineComponent implements OnInit, OnDestroy {
             return;
         }
 
-        if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
-            this.peer.destroy();
-            this.peer = undefined;
+        if (this.peerWrapper?.peer.destroyed) {
+            this.peerWrapper.destroy();
+            this.peerWrapper = undefined;
         }
-        if (!this.peer) {
-            this.peer = this.peerjsService.getPeer({
+        if (!this.peerWrapper) {
+            this.peerWrapper = this.peerjsService.getPeer({
                 peerID: this.peerID,
                 otherPeerID: this.currentPlayerPeerID,
                 onData: (data: ReceiveData) => {
@@ -143,16 +143,16 @@ export class MachineComponent implements OnInit, OnDestroy {
                         errorMessage: error?.message,
                     });
 
-                    if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
-                        this.peer?.destroy();
+                    if (this.peerWrapper?.peer.destroyed) {
+                        this.peerWrapper?.destroy();
 
                         this.initalizePeer();
                     } else {
-                        if (!this.peer?.sentDataConnection?.open) {
+                        if (!this.peerWrapper?.sentDataConnection?.open) {
                             this.connect();
                         }
 
-                        if (!this.peer?.sentCallConnection?.open) {
+                        if (!this.peerWrapper?.sentMediaConnection?.open) {
                             this.call();
                         }
                     }
@@ -161,16 +161,16 @@ export class MachineComponent implements OnInit, OnDestroy {
                     // this.connect();
                 },
                 onDestroy: () => {
-                    if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
-                        this.peer?.destroy();
+                    if (this.peerWrapper?.peer.destroyed) {
+                        this.peerWrapper?.destroy();
 
                         this.initalizePeer();
                     } else {
-                        if (!this.peer?.sentDataConnection?.open) {
+                        if (!this.peerWrapper?.sentDataConnection?.open) {
                             this.connect();
                         }
 
-                        if (!this.peer?.sentCallConnection?.open) {
+                        if (!this.peerWrapper?.sentMediaConnection?.open) {
                             this.call();
                         }
                     }
@@ -178,7 +178,7 @@ export class MachineComponent implements OnInit, OnDestroy {
             });
 
         } else {
-            this.peer.setOtherPeerID(this.currentPlayerPeerID);
+            this.peerWrapper.setOtherPeerID(this.currentPlayerPeerID);
         }
     }
     
@@ -193,30 +193,30 @@ export class MachineComponent implements OnInit, OnDestroy {
 
         sendFormControl.patchValue('');
 
-        this.peer?.send({
+        this.peerWrapper?.send({
             dataType: 'message',
             value: message,
         });
     }
 
     public connect(): void {
-        if (!this.peer) {
-            throw Error("Unexpected missing peer");
+        if (!this.peerWrapper) {
+            throw Error("Unexpected missing peerWrapper");
         }
 
-        this.peer.connect();
+        this.peerWrapper.connect();
     }
 
     public call(): void {
-        if (!this.peer) {
-            throw Error("Unexpected missing peer");
+        if (!this.peerWrapper) {
+            throw Error("Unexpected missing peerWrapper");
         }
 
         if (!this.machineMediaStream) {
             throw Error("Missing stream");
         }
 
-        this.peer.call(this.machineMediaStream);
+        this.peerWrapper.call(this.machineMediaStream);
     }
 
     public clearDatas(): void {
@@ -236,7 +236,7 @@ export class MachineComponent implements OnInit, OnDestroy {
     }
 
     public ngOnDestroy(): void {
-        this.peer?.destroy();
+        this.peerWrapper?.destroy();
         
         this._sub?.unsubscribe();
     }

@@ -107,7 +107,7 @@
 
         <br>
         
-        <div class="video-container" [ngClass]="{'hide': !peer?.requestedCallConnection}">
+        <div class="video-container" [ngClass]="{'hide': !peerWrapper?.requestedMediaConnection}">
             <div>
                 Machine MediaStream:
             </div>
@@ -117,7 +117,7 @@
         </div>
 
 
-        <div *ngIf="currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid && !peer?.sentDataConnection">
+        <div *ngIf="currentPublicPlayerData.value && myPrivatePlayerData.value && myPrivatePlayerData.value?.uid === currentPublicPlayerData.value?.uid && !peerWrapper?.sentDataConnection">
             <br>
 
             <button (click)="connect()">Connect to machine</button>
@@ -125,15 +125,21 @@
     </div>
 </div>
 
+<div *ngIf="machineData.value">
+    <br>
+
+    <button (click)="connect()">(Attempt to) Connect to machine</button>
+</div>
+
 <br>
 
-<div *ngIf="peer?.sentDataConnection?.open === false">
+<div *ngIf="peerWrapper?.sentDataConnection?.open === false">
     sendDataConnection is pending...
 </div>
 
-<div *ngIf="peer?.sentDataConnection?.open">
+<div *ngIf="peerWrapper?.sentDataConnection?.open">
     <div>
-        <button (click)="peer?.disconnectConnections()">Disconnect connections</button>
+        <button (click)="peerWrapper?.disconnectConnections()">Disconnect connections</button>
     </div>
     
     <br>

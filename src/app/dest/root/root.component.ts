@@ -25,7 +25,7 @@ export class RootComponent implements OnInit, OnDestroy {
 
     public peerID?: string;
     public machinePeerID?: string;
-    public peer?: PeerWrapper;
+    public peerWrapper?: PeerWrapper;
 
     public datas: ReceiveData[] = [];
 
@@ -117,7 +117,7 @@ export class RootComponent implements OnInit, OnDestroy {
             };
 
             if (this.currentPublicPlayerData.value?.uid !== this.myPrivatePlayerData.value?.uid) {
-                this.peer?.disconnectConnections();
+                this.peerWrapper?.disconnectConnections();
             } else {
                 this.initalizePeer();
             }
@@ -176,13 +176,13 @@ export class RootComponent implements OnInit, OnDestroy {
             return;
         }
 
-        if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
-            this.peer.destroy();
-            this.peer = undefined;
+        if (this.peerWrapper?.peer.destroyed) {
+            this.peerWrapper.destroy();
+            this.peerWrapper = undefined;
         }
 
-        if (!this.peer) {
-            this.peer = this.peerjsService.getPeer({
+        if (!this.peerWrapper) {
+            this.peerWrapper = this.peerjsService.getPeer({
                 peerID: this.peerID,
                 otherPeerID: this.machinePeerID,
                 onData: (data: ReceiveData) => {
@@ -211,11 +211,11 @@ export class RootComponent implements OnInit, OnDestroy {
                         errorMessage: error?.message,
                     });
     
-                    if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
-                        this.peer?.destroy();
+                    if (this.peerWrapper?.peer.destroyed) {
+                        this.peerWrapper?.destroy();
     
                         this.initalizePeer();
-                    } else if (!this.peer?.sentCallConnection?.open) {
+                    } else if (!this.peerWrapper?.sentMediaConnection?.open) {
                         this.connect();
                     }
                 },
@@ -225,17 +225,17 @@ export class RootComponent implements OnInit, OnDestroy {
                     }
                 },
                 onDestroy: () => {
-                    if (this.peer?.peerState === 'destroyed' || this.peer?.peer.destroyed) {
-                        this.peer?.destroy();
+                    if (this.peerWrapper?.peer.destroyed) {
+                        this.peerWrapper?.destroy();
     
                         this.initalizePeer();
-                    } else if (!this.peer?.sentCallConnection?.open) {
+                    } else if (!this.peerWrapper?.sentMediaConnection?.open) {
                         this.connect();
                     }
                 },
             });
         } else {
-            this.peer.setOtherPeerID(this.machinePeerID);
+            this.peerWrapper.setOtherPeerID(this.machinePeerID);
         }
     }
 
@@ -250,7 +250,7 @@ export class RootComponent implements OnInit, OnDestroy {
 
         sendFormControl.patchValue('');
 
-        this.peer?.send({
+        this.peerWrapper?.send({
             dataType: 'message',
             value: message,
         });
@@ -328,7 +328,7 @@ export class RootComponent implements OnInit, OnDestroy {
             
             if (error === "Playing videos timed out") {
                 setTimeout(() => {
-                    this.peer?.requestCallConnection();
+                    this.peerWrapper?.requestOtherPeerToCall();
                 }, 3000);
             }
         });
@@ -345,12 +345,12 @@ export class RootComponent implements OnInit, OnDestroy {
             return;
         }
 
-        if (!this.peer) {
-            console.warn("Unexpected missing peer");
+        if (!this.peerWrapper) {
+            console.warn("Unexpected missing peerWrapper");
             return;
         }
 
-        this.peer.connect();
+        this.peerWrapper.connect();
     }
 
     public clearDatas(): void {
@@ -362,7 +362,7 @@ export class RootComponent implements OnInit, OnDestroy {
     }
 
     public ngOnDestroy(): void {
-        this.peer?.destroy();
+        this.peerWrapper?.destroy();
         
         this._sub?.unsubscribe();
         this._sub2?.unsubscribe();

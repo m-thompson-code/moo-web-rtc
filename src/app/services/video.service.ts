@@ -54,7 +54,7 @@ export class VideoService {
             return playPromise.catch(error => {
                 if (attempt >= RETRY_LIMIT) {
                     console.error(error);
-                    return;
+                    throw error;
                 }
 
                 console.error(error);
@@ -62,15 +62,16 @@ export class VideoService {
                 return Promise.resolve((resolve: () => void) => {
                     setTimeout(() => {
                         resolve();
-                    }, 300 + 500 * attempt);
+                    }, 1000 + 500 * attempt);
                 }).then(() => {
+                    console.warn("playVideo retry", attempt + 1);
                     return this.playVideo(video, attempt + 1);
                 });
             });
         } catch(error) {
             if (attempt >= RETRY_LIMIT) {
                 console.error(error);
-                return Promise.resolve();
+                throw error;
             }
 
             console.error(error);
@@ -80,6 +81,7 @@ export class VideoService {
                     resolve();
                 }, 300 + 500 * attempt);
             }).then(() => {
+                console.warn("playVideo retry", attempt + 1);
                 return this.playVideo(video, attempt + 1);
             });
         }
