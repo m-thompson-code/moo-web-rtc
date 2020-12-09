@@ -141,7 +141,7 @@ export class MachineComponent implements OnInit, OnDestroy {
             navigator.getUserMedia = navigator.getUserMedia || (navigator as any).webkitGetUserMedia || (navigator as any).mozGetUserMedia;
         
             // TODO: Bring back audio (just for testing)
-            navigator.getUserMedia({video: true, audio: false}, mediaStream => {
+            navigator.getUserMedia({video: true, audio: true}, mediaStream => {
                 resolve(mediaStream);
             }, error => {
                 reject(error);

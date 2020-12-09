@@ -48,12 +48,14 @@ a:hover, a:focus, a:active {
     width: 100vw;
     height: 100vh;
 
-    background: rgba(black, .7);
+    background: rgba(black, .2);
     color: white;
 
     font-size: 32px;
 
     cursor: pointer;
+
+    pointer-events: none;
 }
 
 video {

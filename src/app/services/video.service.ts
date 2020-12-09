@@ -43,6 +43,13 @@ export class VideoService {
             };
         }
 
+        for (const _video of this.videosToHandle) {
+            // Skip adding videos that are always in this array
+            if (video === _video) {
+                return;
+            }
+        }
+
         this.videosToHandle.push(video);
     }
 

@@ -198,9 +198,9 @@ export class RootComponent implements OnInit, OnDestroy {
                     this.datas.push(data);
                 },
                 onCall: (conn, stream) => {
-                    if (this.machineStream) {
-                        this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
-                    }
+                    // if (this.machineStream) {
+                    //     this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
+                    // }
     
                     this.machineStream = stream;
                     

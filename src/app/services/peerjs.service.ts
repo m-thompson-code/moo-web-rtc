@@ -632,10 +632,10 @@ export class PeerWrapper {
             dataType: 'controller',
             timestamp: Date.now(),
         };
+
+        void this.firebaseService.setControllerData(value);
         
         this.send(receivedData);
-
-        this.firebaseService.setControllerData(value);
     }
 
     private _clearSendDataQueue(): void {
