@@ -4,7 +4,6 @@ import { Observable, Subject } from 'rxjs';
 import firebase from 'firebase/app';
 
 import Peer from 'peerjs';
-import util from 'peerjs';
 
 import { FirebaseService } from './firebase.service';
 
@@ -87,8 +86,11 @@ export type DebugLevel = 0 | 1 | 2 | 3;
 export type GetPeerOptions = IsNotCaller | IsCaller;
 
 /**
- * Wrapper for the `Peer` object from `peerjs` library. 
- * Used to collect the needed connections (`Peer.DataConnection`/`Peer.MediaConnection`)
+ * Wrapper for the `Peer` object from `peerjs` library.
+ * 
+ * Used to manage the needed send/requested connections: `Peer.DataConnection`/`Peer.MediaConnection`.
+ * 
+ * For ease of use, call PeerService.getPeer instead of using the class's constructor directly.
  * 
  * The purpose of this wrapper is to simplify using an expected one-to-one peer connection 
  * where one peer is expected to be the caller and the other is not
@@ -107,10 +109,7 @@ export class PeerWrapper {
     // Used to receive media stream
     public requestedMediaConnection?: Peer.MediaConnection;
 
-    // public state: 'pending' | 'initalized' | 'destroyed' = 'pending';
-    // public peerState: 'pending' | 'initalizing' | 'open' | 'connecting' | 'connected' | 'destroyed' = 'pending';
-
-    public peerID: string;
+    public readonly peerID: string;
 
     /**
      * Use setOtherPeerID to make sure connections are properly disconnected, etc
@@ -971,8 +970,31 @@ export class PeerWrapper {
 })
 export class PeerjsService {
     constructor(private ngZone: NgZone, public firebaseService: FirebaseService) {
-        // TODO: use util
-        // console.log(util);
+        // this.logUtil();
+    }
+
+    public logUtil(): any {
+        const util = (window as any)?.peerjs?.util || {};
+
+        util.supports = util.supports || {};
+
+        if (!util) {
+            console.warn("Unexpected missing peerjs.util");
+            return;
+        }
+
+        const metadata = {
+            browser: util?.browser,
+            audioVideo: util?.supports?.audioVideo,
+            data: util?.supports?.data,
+            binary: util?.supports?.binary,
+            binaryBlob: util?.supports?.binaryBlob,
+            reliable: util?.supports?.reliable,
+        };
+
+        console.log(metadata);
+
+        return metadata;
     }
 
     public getRandomPeerID(): string {

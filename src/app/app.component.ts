@@ -4,6 +4,7 @@ import firebase from 'firebase/app';
 import { Subscription } from 'rxjs';
 
 import { AuthService } from './services/auth.service';
+import { PeerjsService } from './services/peerjs.service';
 
 @Component({
     selector: 'app-inital-root',
@@ -17,11 +18,13 @@ export class AppComponent implements OnInit, OnDestroy {
 
     private _sub?: Subscription;
 
-    constructor(private authService: AuthService) {
+    constructor(private authService: AuthService, private peerjsService: PeerjsService) {
 
     }
 
     public ngOnInit(): void {
+        this.peerjsService.logUtil();
+        
         void this._init();
     }
 
