@@ -285,8 +285,6 @@ export class FirebaseService {
             const players: PublicPlayerData[] = [];
 
             for (const doc of collection) {
-                console.log(doc);
-
                 players.push({
                     uid: doc.uid || '',
                     username: doc.username || '',
@@ -339,8 +337,6 @@ export class FirebaseService {
             const players: PrivatePlayerData[] = [];
 
             for (const doc of collection) {
-                console.log(doc);
-
                 const player = this._rawDataToPrivatePlayerData(doc);
 
                 if (player) {

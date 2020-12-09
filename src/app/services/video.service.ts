@@ -131,7 +131,9 @@ export class VideoService {
             });
         });
 
-        track.onended = () => console.log('track onended');
+        track.onended = () => {
+            console.log('track onended');
+        }
 
         this.pushPendingVideo(video);
     }

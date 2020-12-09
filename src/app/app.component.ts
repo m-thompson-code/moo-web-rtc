@@ -33,7 +33,7 @@ export class AppComponent implements OnInit, OnDestroy {
         });
 
         return this.authService.init().then(user => {
-            console.log(user);
+            // console.log(user);
 
             if (!user) {
                 return this.authService.signInAnonymously();

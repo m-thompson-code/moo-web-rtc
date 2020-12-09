@@ -191,8 +191,6 @@ export class RootComponent implements OnInit, OnDestroy {
                     this.datas.push(data);
                 },
                 onCall: (conn, stream) => {
-                    console.log(conn, stream);
-    
                     if (this.machineStream) {
                         this.videoService.removeVideoStream(this.machineStream, this.machineVideo.nativeElement);
                     }
@@ -320,7 +318,6 @@ export class RootComponent implements OnInit, OnDestroy {
         this.videoService.handledRequiredInteraction = true;
 
         return Promise.all(promises).then(() => {
-            console.log("handleRequiredInteraction finished");
             // pass
         }).catch(error => {
             console.error(error);
