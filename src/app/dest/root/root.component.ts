@@ -60,6 +60,8 @@ export class RootComponent implements OnInit, OnDestroy {
         errorMessage?: string;
     }[] = [];
 
+    public alreadyActivePeer: boolean = false;
+
     constructor(private fb: FormBuilder, private firebaseService: FirebaseService, 
     private peerjsService: PeerjsService, public videoService: VideoService, private authService: AuthService) {
         
@@ -168,6 +170,11 @@ export class RootComponent implements OnInit, OnDestroy {
     }
     
     public initalizePeer(): void {
+        if (this.alreadyActivePeer) {
+            console.warn("Unexpected peer already exists");
+            return;
+        }
+
         if (!this.peerID) {
             console.warn("Unexpected missing peerID");
             return;
@@ -206,6 +213,10 @@ export class RootComponent implements OnInit, OnDestroy {
                     }
                 },
                 onError: (error) => {
+                    if (error.type === 'unavailable-id') {
+                        this.alreadyActivePeer = true;
+                    }
+                    
                     this.errors.push({
                         errorType: error?.type,
                         errorMessage: error?.message,

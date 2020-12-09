@@ -1,28 +1,55 @@
-import { Injectable, NgZone } from '@angular/core';
+import { Injectable, NgZone, Renderer2 } from '@angular/core';
 import { environment } from '@environment';
 
 @Injectable({
     providedIn: 'root'
 })
 export class VideoService {
-    public videosToPlay: HTMLVideoElement[] = [];
+    public videosToHandle: HTMLVideoElement[] = [];
 
     public handledRequiredInteraction: boolean = true;// TODO: ?
 
-    constructor(private ngZone: NgZone) {
+    private renderer?: Renderer2;
 
+    private _clickFunc: () => void;
+    private _detachListeners?: () => void;
+
+    constructor(private ngZone: NgZone) {
+        this._clickFunc = () => {
+            this.playAllVideos();
+        };
+    }
+
+    public init(renderer: Renderer2): void {
+        this.renderer = renderer;
+    }
+
+    public detach(): void {
+        this._detachListeners?.();
     }
 
     public pushPendingVideo(video: HTMLVideoElement): void {
         this.handledRequiredInteraction = false;
 
-        this.videosToPlay.push(video);
+        if (!this.videosToHandle.length) {
+            if (!this.renderer) {
+                throw new Error("Unexpected missing renderer. Call init");
+            }
+            
+            const _off_click = this.renderer.listen('document', 'click', this._clickFunc);
+
+            this._detachListeners = () => {
+                _off_click();
+            };
+        }
+
+        this.videosToHandle.push(video);
     }
 
     public playAllVideos(): Promise<void> {
         const promises: Promise<any>[] = [];
 
-        this.videosToPlay.forEach(video => {
+        this.videosToHandle.forEach(video => {
             // console.log("video metadata", video.parentNode, video.src, video.srcObject);
 
             if (!video.parentNode) {
@@ -34,9 +61,11 @@ export class VideoService {
             }
         });
 
-        this.videosToPlay = [];
+        this.videosToHandle = [];
 
         this.handledRequiredInteraction = true;
+
+        this._detachListeners?.();
 
         return Promise.all(promises).then(() => {
             // pass
@@ -45,6 +74,8 @@ export class VideoService {
 
     public playVideo(video: HTMLVideoElement, attempt: number = 0): Promise<void> {
         let RETRY_LIMIT = 5;
+
+        video.muted = false;
 
         // Turns out the retry logic messes up the MediaStream anyway, so requesting a fresh call right away is likely better
         // Assumption that we are only supporting browsers that support srcObject
@@ -125,6 +156,7 @@ export class VideoService {
         }
 
         const [track] = stream.getVideoTracks();
+
         track.addEventListener('ended', () => {
             this.ngZone.run(() => {
                 console.log('track ended', video, stream);

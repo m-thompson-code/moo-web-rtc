@@ -69,6 +69,36 @@
     My peerID: <span class="bold">{{ myPrivatePlayerData.value.peerID }}</span>
 </div>
 
+<br>
+
+<div>
+    <div *ngIf="!peerWrapper?.peer">
+        No peer/peerWrapper
+    </div>
+
+    <ng-container *ngIf="peerWrapper?.peer">
+        <div>
+            {{ peerWrapper?.peerID || '(no peerID)' }} - {{ peerWrapper?.otherPeerID || ('(no otherPeerID)') }}
+        </div>
+
+        <br>
+
+        <div>
+            sentDataConntection: {{ !peerWrapper?.sentDataConnection ? '(none)' : peerWrapper?.sentDataConnection?.open }}
+        </div>
+        <div>
+            requestedDataConntection: {{ !peerWrapper?.requestedDataConnection ? '(none)' : peerWrapper?.requestedDataConnection?.open }}
+        </div>
+        <div>
+            sentMediaConntection: {{ !peerWrapper?.sentMediaConnection ? '(none)' : peerWrapper?.sentMediaConnection?.open }} (expected to be none)
+        </div>
+        <div>
+            requestedMediaConntection: {{ !peerWrapper?.requestedMediaConnection ? '(none)' : peerWrapper?.requestedMediaConnection?.open }}
+        </div>
+    </ng-container>
+
+    <br>
+</div>
 
 <!-- 
 <div *ngIf="myPrivatePlayerData.value">
@@ -134,13 +164,14 @@
 </div>
 
 <div class="video-container" [ngClass]="{'hide': !peerWrapper?.requestedMediaConnection}">
+<!-- <div class="video-container"> -->
     <br>
 
     <div>
         Machine MediaStream:
     </div>
 
-    <video #machineVideo playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+    <video #machineVideo autoplay muted playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
     </video>
 </div>
 
@@ -265,4 +296,10 @@
 
 <div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
     Click here to start
+</div>
+
+<div *ngIf="alreadyActivePeer" class="click-overlay">
+    Your session is already active on a different window/tab/browser
+    <br>
+    Please refresh and try again
 </div>

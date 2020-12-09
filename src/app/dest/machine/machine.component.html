@@ -9,6 +9,8 @@
         Machine: 
     </div>
 
+    <br>
+
     <div *ngIf="!machineData.value">
         (none)
     </div>
@@ -17,10 +19,12 @@
         <div>
             global machine peerID: <span class="bold">{{ machineData.value.peerID }}</span> {{ peerID === machineData.value?.peerID ? 'you are the global machine' : '' }}
         </div>
-        <div>
+
+        <button (click)="setMachinePeerID()">Update Machine to my (machine) peerID</button>
+
+        <!-- <div>
             My (machine) peerID: <span class="bold">{{ peerID }}</span> {{ peerID === machineData.value?.peerID ? 'you are the global machine' : '' }}<br>
-            <button (click)="setMachinePeerID()">Update Machine to my (machine) peerID</button>
-        </div>
+        </div> -->
     </div>
 </div>
 
@@ -75,10 +79,41 @@
     </div>
 </div> -->
 
+
 <br>
 
 <div>
-    Your canvas
+    <div *ngIf="!peerWrapper?.peer">
+        No peer/peerWrapper
+    </div>
+
+    <ng-container *ngIf="peerWrapper?.peer">
+        <div>
+            {{ peerWrapper?.peerID || '(no peerID)' }} - {{ peerWrapper?.otherPeerID || ('(no otherPeerID)') }}
+        </div>
+
+        <br>
+
+        <div>
+            sentDataConntection: {{ !peerWrapper?.sentDataConnection ? '(none)' : peerWrapper?.sentDataConnection?.open }}
+        </div>
+        <div>
+            requestedDataConntection: {{ !peerWrapper?.requestedDataConnection ? '(none)' : peerWrapper?.requestedDataConnection?.open }}
+        </div>
+        <div>
+            sentMediaConntection: {{ !peerWrapper?.sentMediaConnection ? '(none)' : peerWrapper?.sentMediaConnection?.open }}
+        </div>
+        <div>
+            requestedMediaConntection: {{ !peerWrapper?.requestedMediaConnection ? '(none)' : peerWrapper?.requestedMediaConnection?.open }} (expected to be none)
+        </div>
+    </ng-container>
+</div>
+
+<br>
+<br>
+
+<div>
+    Your Canvas:
 </div>
 
 <canvas #canvas width="500" height="250">
@@ -88,7 +123,7 @@
 <br>
 
 <div>
-    Your MediaStream
+    Your MediaStream:
 </div>
 
 <div>
@@ -96,7 +131,7 @@
 </div>
 
 <div class="video-container">
-    <video #video playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+    <video #video playsinline muted autoplay [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
     </video>
 </div>
 <div>

@@ -1,10 +1,11 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, Renderer2 } from '@angular/core';
 
 import firebase from 'firebase/app';
 import { Subscription } from 'rxjs';
 
 import { AuthService } from './services/auth.service';
 import { PeerjsService } from './services/peerjs.service';
+import { VideoService } from './services/video.service';
 
 @Component({
     selector: 'app-inital-root',
@@ -18,17 +19,20 @@ export class AppComponent implements OnInit, OnDestroy {
 
     private _sub?: Subscription;
 
-    constructor(private authService: AuthService, private peerjsService: PeerjsService) {
+    constructor(private renderer: Renderer2, private authService: AuthService, 
+    private peerjsService: PeerjsService, private videoService: VideoService) {
 
     }
 
     public ngOnInit(): void {
         this.peerjsService.logUtil();
-        
+
         void this._init();
     }
 
     private _init(): Promise<void> {
+        this.videoService.init(this.renderer);
+
         this.initalized = false;
 
         this._sub = this.authService.onUserChange().subscribe(user => {
