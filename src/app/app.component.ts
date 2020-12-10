@@ -26,7 +26,8 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     public ngOnInit(): void {
-        this.peerjsService.logUtil();
+        const util = this.peerjsService.getUtil();
+        console.log(util);
 
         void this._init();
     }

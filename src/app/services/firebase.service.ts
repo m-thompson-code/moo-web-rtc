@@ -13,8 +13,9 @@ import firebase from 'firebase/app';
 import 'firebase/auth';
 
 import { AuthService } from './auth.service';
-import { ControllerDataValue } from './peerjs.service';
+import { ControllerDataValue, PeerjsService, Util } from './peerjs.service';
 import { AngularFireDatabase } from '@angular/fire/database';
+import { utils } from 'protractor';
 // // import 'firebase/database';
 // import 'firebase/firestore';
 // // import 'firebase/storage';
@@ -70,6 +71,8 @@ export interface WritePrivatePlayerData {
     phoneNumber: string;
     emailAddress: string;
     shippingAddress: string;
+
+    util: Util;
 }
 
 export interface RawPrivatePlayerData extends RawPublicPlayerData {
@@ -83,6 +86,8 @@ export interface RawPrivatePlayerData extends RawPublicPlayerData {
     phoneNumber: string;
     emailAddress: string;
     shippingAddress: string;
+
+    util: Util;
 }
 
 export interface PublicPlayerData {
@@ -108,6 +113,8 @@ export interface PrivatePlayerData extends PublicPlayerData {
     phoneNumber: string;
     emailAddress: string;
     shippingAddress: string;
+
+    util: Util;
 }
 
 export interface AddPlayerData {
@@ -130,6 +137,8 @@ export interface SetPlayerData {
     phoneNumber: string;
     emailAddress: string;
     shippingAddress: string;
+
+    util: Util;
 }
 
 const PUBLIC_PLAYERS_COL = 'public_players';
@@ -146,8 +155,17 @@ const CONTROLLER_COL = 'controller';
     providedIn: 'root'
 })
 export class FirebaseService {
+    public peerjsService?: PeerjsService;
 
     constructor(private authService: AuthService, private firestore: AngularFirestore, private database: AngularFireDatabase) { }
+
+    private _getPeerjsService(): PeerjsService {
+        if (!this.peerjsService) {
+            throw new Error("Unexpected missing peerjsService. Do not inject through constructor, set this value through peerjsService's constructor");
+        }
+
+        return this.peerjsService;
+    }
 
     public addUser(playerData: AddPlayerData): Promise<void> {
         const batch = firebase.firestore().batch();
@@ -163,6 +181,8 @@ export class FirebaseService {
         const privatePlayerRef = firebase.firestore().collection(PRIVATE_PLAYERS_COL).doc(uid);
 
         const timestampFieldValue: firebase.firestore.FieldValue = firebase.firestore.FieldValue.serverTimestamp();
+
+        const util = this._getPeerjsService().getUtil();
 
         const publicData: WritePublicPlayerData = {
             username: playerData.username,
@@ -182,7 +202,9 @@ export class FirebaseService {
             peerID: playerData.peerID,
             phoneNumber: playerData.phoneNumber,
             emailAddress: playerData.emailAddress,
-            shippingAddress: playerData.shippingAddress,   
+            shippingAddress: playerData.shippingAddress,
+            
+            util: util,
         };
 
         batch.set(privatePlayerRef, privateData);
@@ -213,6 +235,8 @@ export class FirebaseService {
 
         batch.set(currentPublicPlayerRef, publicData);
 
+        const util = this._getPeerjsService().getUtil();
+
         const privateData: WritePrivatePlayerData & { uid: string } = {
             uid: privatePlayerData.uid,
 
@@ -226,6 +250,8 @@ export class FirebaseService {
             phoneNumber: privatePlayerData.phoneNumber,
             emailAddress: privatePlayerData.emailAddress,
             shippingAddress: privatePlayerData.shippingAddress,
+
+            util: util,
         };
 
         batch.set(currentPrivatePlayerRef, privateData);
@@ -314,6 +340,8 @@ export class FirebaseService {
             phoneNumber: data.phoneNumber,
             emailAddress: data.emailAddress,
             shippingAddress: data.shippingAddress,
+
+            util: this._getPeerjsService().rawDataToUtil(data?.util),
         };
 
         return privatePlayerData;

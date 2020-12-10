@@ -9,6 +9,15 @@ import { FirebaseService } from './firebase.service';
 
 const REMOTE_SERVER_HOST = 'moo-web-rtc-server.uc.r.appspot.com';
 
+export interface Util {
+    browser: string;
+    audioVideo: boolean;
+    data: boolean
+    binary: boolean
+    binaryBlob: boolean
+    reliable: boolean
+}
+
 export class PingError extends Error {
     public __pingError: boolean = true;
     constructor(...params: any) {
@@ -135,10 +144,11 @@ export class PeerWrapper {
 
         this.peer = new Peer(this.peerID, {
             debug: options.debugLevel || 0,
-            host: options.server === 'local' ? 'localhost' : REMOTE_SERVER_HOST,
-            port: 443,// The default port used by peerJS and seems to be the right port for our GAE hosting for the peerJS server
-            secure: options.server === 'local' ? false : true,
-            path: '/'
+            // host: options.server === 'local' ? 'localhost' : REMOTE_SERVER_HOST,
+            // port: 443,// The default port used by peerJS and seems to be the right port for our GAE hosting for the peerJS server
+            // secure: options.server === 'local' ? false : true,
+            // iceTransportPolicty: 'relay',
+            // path: '/'
         });
 
         this._initalizePeer();
@@ -275,7 +285,7 @@ export class PeerWrapper {
                             console.log("peer > requestedDataConnection - error", conn.peer);
                         }
 
-                        this._handleError(error, conn);
+                        this._handleError(error, {conn: conn});
                     });
                 });
             });
@@ -362,7 +372,7 @@ export class PeerWrapper {
                             console.log('peer > requestedMediaConnection - error', mediaConnection.peer);
                         }
 
-                        this._handleError(error, mediaConnection);
+                        this._handleError(error, {conn: mediaConnection});
                     });
                 });
             });
@@ -396,7 +406,7 @@ export class PeerWrapper {
                     console.log('peer - error');
                 }
 
-                this._handleError(error, this.peer);
+                this._handleError(error, {peer: this.peer});
             });
         });
 
@@ -465,7 +475,7 @@ export class PeerWrapper {
                     console.log("peer > sentDataConnection - error", conn.peer);
                 }
 
-                this._handleError(error, conn);
+                this._handleError(error, {conn: conn});
             });
         });
 
@@ -531,7 +541,7 @@ export class PeerWrapper {
         this._clearPing();
 
         this._pingTimeout = window.setTimeout(() => {
-            this._handleError(new PingError("Ping timeout"), this.sentDataConnection);
+            this._handleError(new PingError("Ping timeout"), {conn: this.sentDataConnection});
         }, 10 * 1000);
     }
 
@@ -764,7 +774,7 @@ export class PeerWrapper {
                     console.log('peer > sentMediaConnection - error');
                 }
 
-                this._handleError(error, mediaConnection);
+                this._handleError(error, {conn: mediaConnection});
             });
         });
 
@@ -851,7 +861,10 @@ export class PeerWrapper {
         }
     }
     
-    private _handleError(error: any, connOrPeer?: Peer | Peer.DataConnection | Peer.MediaConnection): void {
+    private _handleError(error: any, connOrPeer?: {peer?: Peer, conn?: Peer.DataConnection | Peer.MediaConnection}): void {
+        const peer: Peer | undefined = connOrPeer?.peer;
+        const conn: Peer.DataConnection | Peer.MediaConnection | undefined = connOrPeer?.conn;
+
         let destroyPeer = false;
         let disconnectConnections = false;
 
@@ -961,9 +974,7 @@ export class PeerWrapper {
             return;
         }
 
-        const peer = connOrPeer as Peer;
-
-        if (destroyPeer || peer.destroyed === true) {
+        if (destroyPeer || peer && peer.destroyed === true) {
             console.error('peer was destroyed as a result of this error, cleaning up connections and peer object');
 
             this.destroy();
@@ -971,9 +982,7 @@ export class PeerWrapper {
             return;
         }
 
-        const conn = connOrPeer as (Peer.DataConnection | Peer.MediaConnection);
-
-        if (disconnectConnections || !conn.open) {
+        if (disconnectConnections || conn && !conn.open) {
             console.error('connection has closed as a result of this error, cleaning up connections');
 
             this.disconnectConnections();
@@ -986,31 +995,24 @@ export class PeerWrapper {
 })
 export class PeerjsService {
     constructor(private ngZone: NgZone, public firebaseService: FirebaseService) {
-        // this.logUtil();
+        this.firebaseService.peerjsService = this;
     }
 
-    public logUtil(): any {
-        const util = (window as any)?.peerjs?.util || {};
-
-        util.supports = util.supports || {};
-
-        if (!util) {
-            console.warn("Unexpected missing peerjs.util");
-            return;
-        }
-
-        const metadata = {
-            browser: util?.browser,
-            audioVideo: util?.supports?.audioVideo,
-            data: util?.supports?.data,
-            binary: util?.supports?.binary,
-            binaryBlob: util?.supports?.binaryBlob,
-            reliable: util?.supports?.reliable,
+    public rawDataToUtil(util: any): Util {
+        return {
+            browser: util?.browser || 'unknown',
+            audioVideo: util?.audioVideo || util?.supports?.audioVideo || false,
+            data: util?.data || util?.supports?.data || false,
+            binary: util?.binary || util?.supports?.binary || false,
+            binaryBlob: util?.binaryBlob || util?.supports?.binaryBlob || false,
+            reliable: util?.reliable || util?.supports?.reliable || false,
         };
+    }
 
-        console.log(metadata);
+    public getUtil(): Util {
+        const util = (window as any)?.peerjs?.util;
 
-        return metadata;
+        return this.rawDataToUtil(util);
     }
 
     public getRandomPeerID(): string {
