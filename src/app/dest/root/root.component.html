@@ -171,7 +171,7 @@
         Machine MediaStream:
     </div>
 
-    <video #machineVideo autoplay muted playsinline [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+    <video #machineVideo muted playsinline data-unmute-on-handle="true" data-autoplay="true" [ngClass]="{'hide-video': videoService.videosToHandle.length}">
     </video>
 </div>
 
@@ -294,7 +294,7 @@
 
 
 
-<div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
+<div *ngIf="videoService.videosToHandle.length" class="click-overlay" (click)="handleRequiredInteraction()">
     Video requires click event for audio (sometimes for play)
 </div>
 

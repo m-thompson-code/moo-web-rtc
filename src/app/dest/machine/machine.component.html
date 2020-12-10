@@ -131,7 +131,7 @@
 </div>
 
 <div class="video-container">
-    <video #video playsinline muted autoplay [ngClass]="{'hide-video': !videoService.handledRequiredInteraction}">
+    <video #video muted playsinline data-autoplay="true" [ngClass]="{'hide-video': videoService.videosToHandle.length}">
     </video>
 </div>
 <div>
@@ -225,6 +225,6 @@
 
 
 
-<div *ngIf="!videoService.handledRequiredInteraction" class="click-overlay" (click)="handleRequiredInteraction()">
+<div *ngIf="videoService.videosToHandle.length" class="click-overlay" (click)="handleRequiredInteraction()">
     Click here to start
 </div>

@@ -98,6 +98,8 @@ export class RootComponent implements OnInit, OnDestroy {
     }
 
     public _init(): void {
+        this.machineVideo.nativeElement.muted = true;
+
         this.publicPlayersData = {
             value: [],
             isPending: true,
@@ -310,46 +312,49 @@ export class RootComponent implements OnInit, OnDestroy {
     }
 
     public handleRequiredInteraction(): Promise<void> {
-        const promises: Promise<any>[] = [];
+        console.error("stub");
+        debugger;
+        return Promise.resolve();
+        // const promises: Promise<any>[] = [];
 
-        const timeoutPromise = new Promise((resolve, reject) => {
-            const t = window.setTimeout(() => {
-                reject("Playing videos timed out");
-            }, 10 * 1000);
+        // const timeoutPromise = new Promise((resolve, reject) => {
+        //     const t = window.setTimeout(() => {
+        //         reject("Playing videos timed out");
+        //     }, 10 * 1000);
 
-            promises.push(this.videoService.playAllVideos().then(() => {
-                clearTimeout(t);
+        //     promises.push(this.videoService.playAllVideos().then(() => {
+        //         clearTimeout(t);
 
-                resolve();
-            }));
-        });
+        //         resolve();
+        //     }));
+        // });
 
-        promises.push(timeoutPromise);
+        // promises.push(timeoutPromise);
 
-        this.videoService.handledRequiredInteraction = true;
+        // // this.videoService.handledRequiredInteraction = true;
 
-        return Promise.all(promises).then(() => {
-            // pass
-        }).catch(error => {
-            console.error(error);
+        // return Promise.all(promises).then(() => {
+        //     // pass
+        // }).catch(error => {
+        //     console.error(error);
 
-            debugger;
+        //     debugger;
 
-            // TODO: update UI to show that a retry happened
+        //     // TODO: update UI to show that a retry happened
             
-            if (error === "Playing videos timed out") {
-                setTimeout(() => {
-                    if (!this.peerWrapper) {
-                        debugger;
-                        throw new Error("Unexpected missing peerWrapper");
-                    }
+        //     if (error === "Playing videos timed out") {
+        //         setTimeout(() => {
+        //             if (!this.peerWrapper) {
+        //                 debugger;
+        //                 throw new Error("Unexpected missing peerWrapper");
+        //             }
 
-                    this.connect();
+        //             this.connect();
 
-                    this.peerWrapper.requestOtherPeerToCall();
-                }, 3000);
-            }
-        });
+        //             this.peerWrapper.requestOtherPeerToCall();
+        //         }, 3000);
+        //     }
+        // });
     }
 
     public connect(): void {

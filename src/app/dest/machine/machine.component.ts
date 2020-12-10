@@ -66,6 +66,8 @@ export class MachineComponent implements OnInit, OnDestroy {
     }
 
     private _init(): void {
+        this.video.nativeElement.muted = true;
+
         this.peerID = this._getMyMachinePeerID();
 
         this.formGroup = this.fb.group({
@@ -234,7 +236,9 @@ export class MachineComponent implements OnInit, OnDestroy {
     }
 
     public handleRequiredInteraction(): void {
-        this.videoService.playAllVideos();
+        console.error("stub");
+        debugger;
+        // this.videoService.playAllVideos();
     }
 
     public initalizePeer() {

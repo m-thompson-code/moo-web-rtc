@@ -16,6 +16,7 @@ export class AppComponent implements OnInit, OnDestroy {
     public user: firebase.User | null = null;
 
     public initalized: boolean = false;
+    public prompted: boolean = false;
 
     private _sub?: Subscription;
 

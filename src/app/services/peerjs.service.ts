@@ -117,6 +117,7 @@ export class PeerWrapper {
     public otherPeerID: string;
 
     public mediaStream?: MediaStream;
+    public receivedMediaStreamID?: string;
 
     private _pingTimeout?: number;
 
@@ -125,7 +126,7 @@ export class PeerWrapper {
     private _controllerSubject: Subject<ControllerData>;
     public controllerObservable: Observable<ControllerData>;
 
-    public showBasicLogs: boolean = true;
+    public showBasicLogs: boolean = false;
 
     constructor(private ngZone: NgZone, private firebaseService: FirebaseService, public options: GetPeerOptions) {
         this.peerID = options.peerID;
@@ -299,6 +300,8 @@ export class PeerWrapper {
                     this.requestedMediaConnection = undefined;
                 }
 
+                this.receivedMediaStreamID = undefined;
+
                 this.requestedMediaConnection = mediaConnection;
 
                 // By not providing a MediaStream in the answer args, we establish a one-wall call
@@ -306,23 +309,35 @@ export class PeerWrapper {
 
                 mediaConnection.on('stream', (stream: MediaStream) => {
                     this.ngZone.run(() => {
-                        if (this.showBasicLogs) {
-                            console.log("peer > requestedMediaConnection - stream", mediaConnection.peer);
-                        }
+                        if (this.requestedMediaConnection === mediaConnection) {
 
-                        if (this.options.isCaller) {
-                            throw new Error("Unexpected isCaller and accepting stream from a peer");
-                        }
+                            // This check is required since if a mediaStream has multiple tracks (video/audio), on stream will get called twice
+                            if (this.receivedMediaStreamID === stream.id) {
+                                console.warn("Received duplicate mediaStream, ignoring");
+                                return;
+                            }
 
-                        if (!this.options.onCall) {
-                            throw new Error("Unexpected missing onCall");
-                        }
+                            this.receivedMediaStreamID = stream.id;
 
-                        if (mediaConnection.open) {
-                            this._emitCallReceived();
+                            if (this.showBasicLogs) {
+                                console.log("peer > requestedMediaConnection - stream", mediaConnection.peer);
+                            }
+    
+                            if (this.options.isCaller) {
+                                throw new Error("Unexpected isCaller and accepting stream from a peer");
+                            }
+    
+                            if (!this.options.onCall) {
+                                throw new Error("Unexpected missing onCall");
+                            }
+    
+                            if (mediaConnection.open) {
+                                this._emitCallReceived();
+                            }
+    
+                            console.log("on stream");
+                            this.options.onCall(mediaConnection, stream);
                         }
-
-                        this.options.onCall(mediaConnection, stream);
                     });
                 });
 
@@ -709,6 +724,7 @@ export class PeerWrapper {
             this.sentMediaConnection = undefined;
         }
 
+        console.log("call", this.otherPeerID, this.mediaStream);
         const mediaConnection = this.peer.call(this.otherPeerID, this.mediaStream);
 
         // Reject calling if peer is not the caller

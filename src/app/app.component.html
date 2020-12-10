@@ -18,6 +18,10 @@
     initalizing...
 </ng-container>
 
-<ng-container *ngIf="initalized">
+<div *ngIf="!prompted">
+    <a (click)="prompted = true">Click here to continue</a>
+</div>
+
+<ng-container *ngIf="initalized && prompted">
     <router-outlet></router-outlet>
 </ng-container>
