@@ -144,11 +144,10 @@ export class PeerWrapper {
 
         this.peer = new Peer(this.peerID, {
             debug: options.debugLevel || 0,
-            // host: options.server === 'local' ? 'localhost' : REMOTE_SERVER_HOST,
-            // port: 443,// The default port used by peerJS and seems to be the right port for our GAE hosting for the peerJS server
-            // secure: options.server === 'local' ? false : true,
-            // iceTransportPolicty: 'relay',
-            // path: '/'
+            host: options.server === 'local' ? 'localhost' : REMOTE_SERVER_HOST,
+            port: 443,// The default port used by peerJS and seems to be the right port for our GAE hosting for the peerJS server
+            secure: options.server === 'local' ? false : true,
+            path: '/'
         });
 
         this._initalizePeer();
