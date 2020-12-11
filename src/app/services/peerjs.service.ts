@@ -137,6 +137,8 @@ export class PeerWrapper {
 
     public showBasicLogs: boolean = false;
 
+    public skipDataConnections: boolean = true;
+
     constructor(private ngZone: NgZone, private firebaseService: FirebaseService, public options: GetPeerOptions) {
         this.peerID = options.peerID;
         this.otherPeerID = options.otherPeerID;
@@ -224,6 +226,11 @@ export class PeerWrapper {
                         if (conn.peer !== this.otherPeerID) {
                             console.warn("Unexpected connection open was from a peer that was not a peer with otherPeerID");
                             conn.close();
+                            return;
+                        }
+
+                        if (this.skipDataConnections) {
+                            console.log("peer is ready, but skipping any connection stuff (skipDataConnections)");
                             return;
                         }
 
@@ -316,6 +323,12 @@ export class PeerWrapper {
                 // By not providing a MediaStream in the answer args, we establish a one-wall call
                 mediaConnection.answer();
 
+                // mediaConnection.peerConnection.onaddstream('stream', stream => {
+                //     this.ngZone.run(() => {
+                //         console.log('peerConnection.onaddstream', stream);
+                //     });
+                // });
+
                 mediaConnection.on('stream', (stream: MediaStream) => {
                     this.ngZone.run(() => {
                         if (this.requestedMediaConnection === mediaConnection) {
@@ -340,7 +353,7 @@ export class PeerWrapper {
                                 throw new Error("Unexpected missing onCall");
                             }
     
-                            if (mediaConnection.open) {
+                            if (!this.skipDataConnections && mediaConnection.open) {
                                 this._emitCallReceived();
                             }
     
@@ -419,7 +432,12 @@ export class PeerWrapper {
      */
     public connect(): Peer.DataConnection | null {
         if (this.peer.destroyed) {
-            console.warn("Unable to call connect since peer has been destroyed");
+            console.error("Unable to call connect since peer has been destroyed");
+            return null;
+        }
+
+        if (this.skipDataConnections) {
+            console.warn("connect -> skipping DataConnections");
             return null;
         }
 
@@ -677,6 +695,11 @@ export class PeerWrapper {
     }
 
     public send(data: SendData): void {
+        if (!this.skipDataConnections) {
+            console.warn("send -> skipping DataConnections");
+            return;
+        }
+
         if (!this.sentDataConnection || !this.sentDataConnection?.open) {
             if (!this.sentDataConnection) {
                 if (this.showBasicLogs) {
@@ -745,12 +768,6 @@ export class PeerWrapper {
         }
 
         this.sentMediaConnection = mediaConnection;
-
-        if (mediaConnection?.open) {
-            console.warn("Testing if this is open");
-            debugger;
-            this._pingCallConnection();
-        }
 
         mediaConnection.on('close', () => {
             this.ngZone.run(() => {
@@ -967,6 +984,8 @@ export class PeerWrapper {
         } catch(onError) {
             console.warn(onError);
         }
+
+        console.error(connOrPeer);
 
         // Exit early if no connOrPeer passed
         if (!connOrPeer) {
